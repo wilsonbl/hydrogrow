@@ -11,7 +11,7 @@ ECHO = 11
 pulseStart = 0
 pulseEnd = 0
 
-conn = sqlite3.connect('./database/sensorDatabase.db')
+conn = sqlite3.connect('./database/HydroDatabase.db')
 curs = conn.cursor()
 
 while(1):
@@ -34,12 +34,13 @@ while(1):
 
     if distance > 20 and distance < 400:          #Is distance within range
         print ("Distance:",distance - 0.5,"cm")     #Distance with calibration
-        #curs.execute("INSERT INTO readings values(?)", (distance - 0.5,))
-        curs.execute("UPDATE readings SET state = ?", (distance - 0.5,))
+        t = time.strftime("%H:%M:%S", time.localtime())
+        curs.execute("INSERT INTO timed(time, base_water) VALUES(?, ?)", (t, distance-0.5))
+        #curs.execute("UPDATE timed SET base_water = ?", (distance - 0.5,))
     else:
         print ("Out Of Range")                      #display out of range
-        #curs.execute("INSERT INTO readings values(?)", (-1,))
-        curs.execute("UPDATE readings SET state = ?", (0,))
+        curs.execute("INSERT INTO timed(time, base_water) VALUES(?, ?)", (t, 0))
+        #curs.execute("UPDATE timed SET base_water = ?", (0,))
 
     conn.commit()
 
