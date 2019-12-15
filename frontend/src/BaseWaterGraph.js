@@ -1,8 +1,10 @@
 import React, {Component} from 'react';
 import Chart from "react-apexcharts";
 import Button from "@material-ui/core/Button"
+import Typography from '@material-ui/core/Typography';
+import Paper from '@material-ui/core/Paper';
 
-export class BaseWater extends Component {
+export class BaseWaterGraph extends Component {
     constructor(){
         super();
 
@@ -32,7 +34,7 @@ export class BaseWater extends Component {
 
     fetchData = () => {
         const that = this;
-        fetch('/base_water')
+        fetch('/base_water/?num=10')
         .then(res => res.json())
         .then(res => JSON.parse(res))
         .then(function(data){
@@ -66,22 +68,34 @@ export class BaseWater extends Component {
         this.timer = setInterval(() => this.fetchData(), 1000);
     } 
 
+    resetData(){
+        fetch('/base_water', { 
+            method: 'post', 
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({command: 'reset'})
+        })
+    }
+
     render(){
         return (
-            <div className="app">
-                <div className="row">
-                    <div className="mixed-chart">
-                        <Chart
-                        options={this.state.options}
-                        series={this.state.series}
-                        type="line"
-                        width="1500"
-                        />
+            <Paper>
+                <Typography>Base Station Water Level</Typography>
+                <div className="app">
+                    <div className="row">
+                        <div className="mixed-chart">
+                            <Chart
+                            options={this.state.options}
+                            series={this.state.series}
+                            type="line"
+                            width="100%"
+                            />
+                        </div>
                     </div>
+                    <Button variant="contained" color="primary" onClick={this.resetData}>
+                        Reset
+                    </Button>   
                 </div>
-            </div>
-            
+            </Paper>
         );
-        //return <h1>Hello! {this.state.options.xaxis.categories}</h1>
     }
 }

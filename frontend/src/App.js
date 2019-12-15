@@ -1,8 +1,7 @@
 import React, {Component} from 'react';
 import './App.css';
-import LiquidFillGauge from 'react-liquid-gauge';
-import { color } from 'd3-color';
-import {BaseWater} from "./BaseWater";
+import CardGrid from './CardGrid'
+
 
 class App extends Component {
   state = {values: 0}
@@ -24,9 +23,9 @@ class App extends Component {
     const fillColor = '#6495ed';
     return(
       <div className="App">
-      <BaseWater/>
+        <CardGrid />
       </div>
-    )
+    );
   }
 }
 
