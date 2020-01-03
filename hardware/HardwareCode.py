@@ -16,15 +16,23 @@ ECHO = 17
 DB_UPDATE_INTERVAL = 10
 BASE_WATER_UPDATE_INTERVAL = 10
 
+# Share memory between processes
 lock = multiprocessing.Lock()
-base_water = multiprocessing.Value('d', 0.0) # shared memory
 state = multiprocessing.Value('i', 0)
+base_water = multiprocessing.Value('d', 0.0)
+ec = multiprocessing.Value('d', 0.0)
+pH = multiprocessing.Value('d', 0.0)
+nutrient_1 = multiprocessing.Value('d', 0.0)
+nutrient_2 = multiprocessing.Value('d', 0.0)
+nutrient_3 = multiprocessing.Value('d', 0.0)
+nutrient_4 = multiprocessing.Value('d', 0.0)
 
 # Pin initialization
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(TRIG, GPIO.OUT)
 GPIO.setup(ECHO, GPIO.IN)
 
+#LCD initialization
 lcd_columns = 16
 lcd_rows = 2
 i2c = busio.I2C(board.SCL, board.SDA)
@@ -35,24 +43,30 @@ lcd = character_lcd.Character_LCD_RGB_I2C(i2c, lcd_columns, lcd_rows)
 def local_display(i2c, lcd, state):
     state.value = 0
     while True:
-        lcd.message = "BW" + "             " + str(state.value) + "\n" + str(int(base_water.value))
+        if state.value == 0:
+            lcd.message = "BW EC pH       {}\n{:0>2d} {:0>2d} {:0>2d}".format(str(state.value), int(base_water.value), int(ec.value), int(pH.value))
+        elif state.value == 1:
+            lcd.message = "N1 N2 N3 N4    {}\n{:0>2d} {:0>2d} {:0>2d} {:0>2d}".format(str(state.value), int(nutrient_1.value), int(nutrient_2.value), int(nutrient_3.value), int(nutrient_4.value))
+        
         time.sleep(0.2)
 
 
 def local_buttons(i2c, lcd, state):
     state.value = 0
     while True:
-        print(state.value)
-        with lock:
-            if lcd.up_button:
-                if state.value == 3:
+        if lcd.up_button:
+            if state.value == 3:
+                with lock:
                     state.value = 0
-                else:
+            else:
+                with lock:
                     state.value += 1
-            elif lcd.down_button:
-                if state.value == 0:
+        elif lcd.down_button:
+            if state.value == 0:
+                with lock:
                     state.value = 3
-                else:
+            else:
+                with lock:
                     state.value -= 1
 
         time.sleep(0.2)
@@ -97,7 +111,7 @@ def update_database():
 
     while True:
         t = time.strftime("%H:%M:%S", time.localtime())
-        print("INSERTING INTO DB: ", t, base_water.value)
+        print("INSERTING INTO DB: ", t, base_water.value - 0.5)
         curs.execute("INSERT INTO timed(time, base_water) VALUES(?, ?)", (t, base_water.value-0.5))
 
         conn.commit()
