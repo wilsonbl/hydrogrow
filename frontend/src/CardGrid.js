@@ -1,31 +1,31 @@
-import React, {Component} from 'react';
+import React from 'react';
+import clsx from 'clsx';
 import Grid from '@material-ui/core/Grid';
+import Paper from '@material-ui/core/Paper';
 import {BaseWaterGraph} from "./BaseWaterGraph";
 import {BaseWaterGauge} from "./BaseWaterGauge";
 import { makeStyles } from '@material-ui/core/styles';
 
 const useStyles = makeStyles(theme => ({
     root: {
-      flexGrow: 1,
+      flexGrow: 1
     },
     paper: {
-      padding: theme.spacing(5),
-      textAlign: 'center',
-      color: theme.palette.text.secondary,
-    },
-  }));
+        padding: theme.spacing(2)
+    }
+}));
 
 export default function CardGrid(){
     const classes = useStyles();
+    const graphHeightPaper = clsx(classes.paper, classes.graphHeight)
 
     return(
         <div className = {classes.root}>
             <Grid container spacing={2}>
-                <Grid item xs={12} sm={6} md={4} lg={4} xl={3}>
-                    <BaseWaterGraph />
-                </Grid>
-                <Grid item xs={12} sm={6} md={4} lg={4} xl={3}>
-                    <BaseWaterGauge />
+                <Grid item xs={4} sm={4} md={4} lg={4} xl={4}>
+                    <Paper>
+                        <BaseWaterGraph />
+                    </Paper>
                 </Grid>
             </Grid>
         </div>

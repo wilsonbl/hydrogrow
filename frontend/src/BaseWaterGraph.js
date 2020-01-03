@@ -14,6 +14,10 @@ export class BaseWaterGraph extends Component {
                     id: "line",
                     animations: {
                         enabled: false
+                    },
+                    zoom: {
+                        enabled: true,
+                        type: 'x'
                     }
                 },
                 xaxis: {
@@ -78,7 +82,7 @@ export class BaseWaterGraph extends Component {
 
     render(){
         return (
-            <Paper>
+            <div>
                 <Typography>Base Station Water Level</Typography>
                 <div className="app">
                     <div className="row">
@@ -95,7 +99,8 @@ export class BaseWaterGraph extends Component {
                         Reset
                     </Button>   
                 </div>
-            </Paper>
+            </div>
+            
         );
     }
 }
