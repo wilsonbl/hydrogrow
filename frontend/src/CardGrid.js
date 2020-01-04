@@ -1,10 +1,11 @@
 import React from 'react';
 import clsx from 'clsx';
+import { makeStyles } from '@material-ui/core/styles';
 import Grid from '@material-ui/core/Grid';
 import Paper from '@material-ui/core/Paper';
 import {BaseWaterGraph} from "./BaseWaterGraph";
 import {BaseWaterGauge} from "./BaseWaterGauge";
-import { makeStyles } from '@material-ui/core/styles';
+import {NutrientLevels} from "./NutrientLevels"
 
 const useStyles = makeStyles(theme => ({
     root: {
@@ -25,6 +26,11 @@ export default function CardGrid(){
                 <Grid item xs={4} sm={4} md={4} lg={4} xl={4}>
                     <Paper>
                         <BaseWaterGraph />
+                    </Paper>
+                </Grid>
+                <Grid item xs={4} sm={4} md={4} lg={4} xl={4}>
+                    <Paper>
+                        <NutrientLevels />
                     </Paper>
                 </Grid>
             </Grid>

@@ -2,7 +2,6 @@ import React, {Component} from 'react';
 import Chart from "react-apexcharts";
 import Button from "@material-ui/core/Button"
 import Typography from '@material-ui/core/Typography';
-import Paper from '@material-ui/core/Paper';
 
 export class BaseWaterGraph extends Component {
     constructor(){
@@ -11,21 +10,27 @@ export class BaseWaterGraph extends Component {
         this.state = {
             options: {
                 chart: {
-                    id: "line",
+                    type: "line",
                     animations: {
-                        enabled: false
+                        enabled: true
                     },
                     zoom: {
                         enabled: true,
-                        type: 'x'
+                        type: 'x',
+                        autoScaleYaxis: true
+                    },
+                    toolbar: {
+                        autoSelected: 'zoom'
                     }
                 },
                 xaxis: {
-                    categories: []
+                    type: 'datetime'
                 },
-                yaxis: {
-                    floating: false,
-                }
+                tooltip: {
+                    x: {
+                      format: 'HH:mm dd MMM yyyy'
+                    }
+                  },
             },
             series: [
                 {
@@ -38,29 +43,15 @@ export class BaseWaterGraph extends Component {
 
     fetchData = () => {
         const that = this;
-        fetch('/base_water/?num=10')
+        fetch('/base_water/?num=100')
         .then(res => res.json())
         .then(res => JSON.parse(res))
         .then(function(data){
-            let times = data.map(item => item.time);
-            let base_waters = data.map(item => item.base_water)
+            let items = data.map(item => [item.time, item.base_water]);
             that.setState({
-                options : {
-                    xaxis: {
-                        categories: times,
-                        title: {
-                            text: 'Time'
-                        }
-                    },
-                    yaxis: {
-                        title: {
-                            text: 'Distance (cm)'
-                        }
-                    }
-                },
                 series: [
                     {
-                        data: base_waters
+                        data: items
                     }
                 ]
             })
@@ -72,13 +63,13 @@ export class BaseWaterGraph extends Component {
         this.timer = setInterval(() => this.fetchData(), 1000);
     } 
 
-    resetData(){
+    /*resetData(){
         fetch('/base_water', { 
             method: 'post', 
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({command: 'reset'})
         })
-    }
+    }*/
 
     render(){
         return (
@@ -95,9 +86,6 @@ export class BaseWaterGraph extends Component {
                             />
                         </div>
                     </div>
-                    <Button variant="contained" color="primary" onClick={this.resetData}>
-                        Reset
-                    </Button>   
                 </div>
             </div>
             

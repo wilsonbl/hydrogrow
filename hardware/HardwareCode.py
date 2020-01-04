@@ -110,9 +110,10 @@ def update_database():
     curs = conn.cursor()
 
     while True:
-        t = time.strftime("%H:%M:%S", time.localtime())
+        #t = time.strftime("%H:%M:%S", time.localtime())
+        t = int(round(time.time() * 1000))
         print("INSERTING INTO DB: ", t, base_water.value - 0.5)
-        curs.execute("INSERT INTO timed(time, base_water) VALUES(?, ?)", (t, base_water.value-0.5))
+        curs.execute("INSERT INTO BASE_WATER(time, base_water) VALUES(?, ?)", (t, base_water.value - 0.5))
 
         conn.commit()
         time.sleep(DB_UPDATE_INTERVAL)
