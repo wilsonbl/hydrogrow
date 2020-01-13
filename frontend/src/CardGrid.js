@@ -4,8 +4,8 @@ import { makeStyles } from '@material-ui/core/styles';
 import Grid from '@material-ui/core/Grid';
 import Paper from '@material-ui/core/Paper';
 import {BaseWaterGraph} from "./BaseWaterGraph";
-import {BaseWaterGauge} from "./BaseWaterGauge";
 import {NutrientLevels} from "./NutrientLevels"
+import WaterFreq from "./WaterFreq"
 
 const useStyles = makeStyles(theme => ({
     root: {
@@ -31,6 +31,11 @@ export default function CardGrid(){
                 <Grid item xs={4} sm={4} md={4} lg={4} xl={4}>
                     <Paper>
                         <NutrientLevels />
+                    </Paper>
+                </Grid>
+                <Grid item xs={4} sm={4} md={4} lg={4} xl={4}>
+                    <Paper>
+                        <WaterFreq />
                     </Paper>
                 </Grid>
             </Grid>

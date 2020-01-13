@@ -60,7 +60,7 @@ export class BaseWaterGraph extends Component {
     
     componentDidMount(){
         this.fetchData()
-        this.timer = setInterval(() => this.fetchData(), 1000);
+        this.timer = setInterval(() => this.fetchData(), 10000);
     } 
 
     /*resetData(){

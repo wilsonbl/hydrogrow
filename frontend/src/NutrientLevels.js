@@ -7,7 +7,7 @@ export class NutrientLevels extends Component {
         super();
 
         this.state = {
-            series: [100, 5, 36, 75],
+            series: [0, 0, 0, 0],
             options: {
                 chart: {
                     type: 'radialBar'
@@ -22,12 +22,7 @@ export class NutrientLevels extends Component {
                                 fontSize: '16px',
                             },
                             total: {
-                                show: true,
-                                label: 'Total',
-                                formatter: function (w) {
-                                // By default this function returns the average of all series. The below is just an example to show the use of custom formatter function
-                                    return 249
-                                }
+                                show: false,
                             }
                         }
                     }
@@ -37,41 +32,23 @@ export class NutrientLevels extends Component {
         };
     }
 
-    /*fetchData = () => {
+    fetchData = () => {
         const that = this;
-        fetch('/base_water/?num=10')
+        fetch('/nutrients/?num=1')
         .then(res => res.json())
         .then(res => JSON.parse(res))
         .then(function(data){
-            let times = data.map(item => item.time);
-            let base_waters = data.map(item => item.base_water)
+            let nutrients = [data[0].N1, data[0].N2, data[0].N3, data[0].N4]
             that.setState({
-                options : {
-                    xaxis: {
-                        categories: times,
-                        title: {
-                            text: 'Time'
-                        }
-                    },
-                    yaxis: {
-                        title: {
-                            text: 'Distance (cm)'
-                        }
-                    }
-                },
-                series: [
-                    {
-                        data: base_waters
-                    }
-                ]
+                series: nutrients
             })
         })
     }
     
     componentDidMount(){
         this.fetchData()
-        this.timer = setInterval(() => this.fetchData(), 1000);
-    }*/
+        this.timer = setInterval(() => this.fetchData(), 10000);
+    }
 
     render(){
         return (
