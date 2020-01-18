@@ -6,6 +6,7 @@ import Paper from '@material-ui/core/Paper';
 import {BaseWaterGraph} from "./BaseWaterGraph";
 import {NutrientLevels} from "./NutrientLevels"
 import WaterFreq from "./WaterFreq"
+import SubsystemStatus from "./SubsystemStatus"
 
 const useStyles = makeStyles(theme => ({
     root: {
@@ -36,6 +37,11 @@ export default function CardGrid(){
                 <Grid item xs={4} sm={4} md={4} lg={4} xl={4}>
                     <Paper>
                         <WaterFreq />
+                    </Paper>
+                </Grid>
+                <Grid item xs={4} sm={4} md={4} lg={4} xl={4}>
+                    <Paper>
+                        <SubsystemStatus />
                     </Paper>
                 </Grid>
             </Grid>

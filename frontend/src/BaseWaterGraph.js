@@ -1,7 +1,7 @@
 import React, {Component} from 'react';
 import Chart from "react-apexcharts";
-import Button from "@material-ui/core/Button"
 import Typography from '@material-ui/core/Typography';
+import Box from '@material-ui/core/Box';
 
 export class BaseWaterGraph extends Component {
     constructor(){
@@ -63,18 +63,14 @@ export class BaseWaterGraph extends Component {
         this.timer = setInterval(() => this.fetchData(), 10000);
     } 
 
-    /*resetData(){
-        fetch('/base_water', { 
-            method: 'post', 
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({command: 'reset'})
-        })
-    }*/
-
     render(){
         return (
             <div>
-                <Typography>Base Station Water Level</Typography>
+                <Typography variant='h6'>
+                    <Box fontWeight="fontWeightBold">
+                        Base Station Water Level
+                    </Box>
+                </Typography>
                 <div className="app">
                     <div className="row">
                         <div className="mixed-chart">

@@ -11,5 +11,13 @@ router.post('/', (req) => {
         db.close()
     }
 });
+router.get('/', (req, res) => {
+    var db = new sqlite("./database/HydroDatabase.db");
+    var rows = db.prepare("SELECT hr, min, start FROM WATER_FREQ").all();
+    db.close()
+
+    sensorData = JSON.stringify(rows);
+    res.json(sensorData);
+});
 
 module.exports = router;

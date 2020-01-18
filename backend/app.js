@@ -8,6 +8,7 @@ var indexRouter = require('./routes/index');
 var base_waterRouter = require('./routes/base_water');
 var nutrientsRouter = require('./routes/nutrients');
 var water_freqRouter = require('./routes/water_freq');
+var subsystem_statusRouter = require('./routes/subsystem_status');
 
 var app = express();
 
@@ -25,6 +26,7 @@ app.use('/', indexRouter);
 app.use('/base_water', base_waterRouter)
 app.use('/nutrients', nutrientsRouter)
 app.use('/water_freq', water_freqRouter)
+app.use('/subsystem_status', subsystem_statusRouter)
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

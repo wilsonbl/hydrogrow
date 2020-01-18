@@ -1,12 +1,12 @@
-import React, { Component, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import PropTypes from 'prop-types';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import InputAdornment from '@material-ui/core/InputAdornment';
 import DateFnsUtils from '@date-io/date-fns';
 import { DateTimePicker, MuiPickersUtilsProvider } from '@material-ui/pickers';
 import Button from '@material-ui/core/Button';
+import Box from '@material-ui/core/Box';
 
 const useStyles = makeStyles(theme => ({
     textField: {
@@ -19,6 +19,9 @@ const useStyles = makeStyles(theme => ({
     button: {
         margin: theme.spacing(1)
     },
+    title: {
+        margin: theme.spacing(1)
+    }
 }));
 
 
@@ -34,14 +37,31 @@ export default function WaterFreq() {
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({command: 'freq_update', hr: selectedHr, min: selectedMin, start: selectedDateTime})
         })
-        console.log(selectedHr, selectedMin, selectedDateTime)
     }
 
     const updateHr = event => handleHrChange(event.target.value)
     const updateMin = event => handleMinChange(event.target.value);
+
+    
+    useEffect(() => {
+        fetch('/water_freq')
+        .then(res => res.json())
+        .then(res => JSON.parse(res))
+        .then(function(data){
+            handleHrChange(data[0].hr);
+            handleMinChange(data[0].min);
+            handleDateTimeChange(data[0].start);
+        })
+    }, []);
     
     return(
         <div>
+            <Typography variant='h6' className={classes.title}>
+                <Box fontWeight="fontWeightBold">
+                    Node 1 Watering Schedule
+                </Box>
+            </Typography>
+            <br />
             <Typography>
                 Watering will occur every 
             </Typography>
@@ -54,7 +74,7 @@ export default function WaterFreq() {
                 }}
                 variant="outlined"
                 margin="dense"
-                defaultValue={selectedHr}
+                value={selectedHr}
                 InputProps={{
                     endAdornment: <InputAdornment position="end">hr</InputAdornment>,
                 }}
@@ -69,7 +89,7 @@ export default function WaterFreq() {
                 }}
                 variant="outlined"
                 margin="dense"
-                defaultValue={selectedMin}
+                value={selectedMin}
                 InputProps={{
                     endAdornment: <InputAdornment position="end">min</InputAdornment>,
                 }}

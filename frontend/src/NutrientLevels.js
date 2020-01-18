@@ -1,6 +1,7 @@
 import React, {Component} from 'react';
 import Chart from "react-apexcharts";
 import Typography from '@material-ui/core/Typography';
+import Box from '@material-ui/core/Box';
 
 export class NutrientLevels extends Component {
     constructor(){
@@ -53,7 +54,11 @@ export class NutrientLevels extends Component {
     render(){
         return (
             <div>
-                <Typography>Nutrient Levels</Typography>
+                <Typography variant='h6'>
+                    <Box fontWeight="fontWeightBold">
+                        Nutrient Levels
+                    </Box>
+                </Typography>
                 <div id="chart">
                     <Chart options={this.state.options} series={this.state.series} type="radialBar" height={350} />
                 </div>
