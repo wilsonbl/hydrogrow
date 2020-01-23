@@ -6,8 +6,11 @@ var logger = require('morgan');
 
 var indexRouter = require('./routes/index');
 var base_waterRouter = require('./routes/base_water');
+var pHRouter = require('./routes/pH');
+var ECRouter = require('./routes/EC');
 var nutrientsRouter = require('./routes/nutrients');
-var water_freqRouter = require('./routes/water_freq');
+var node1_water_freqRouter = require('./routes/node1_water_freq');
+var node2_water_freqRouter = require('./routes/node2_water_freq');
 var subsystem_statusRouter = require('./routes/subsystem_status');
 
 var app = express();
@@ -24,8 +27,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
 app.use('/base_water', base_waterRouter)
+app.use('/pH', pHRouter)
+app.use('/EC', ECRouter)
 app.use('/nutrients', nutrientsRouter)
-app.use('/water_freq', water_freqRouter)
+app.use('/node1_water_freq', node1_water_freqRouter)
+app.use('/node2_water_freq', node2_water_freqRouter)
 app.use('/subsystem_status', subsystem_statusRouter)
 
 // catch 404 and forward to error handler

@@ -35,11 +35,13 @@ export class NutrientLevels extends Component {
 
     fetchData = () => {
         const that = this;
-        fetch('/nutrients/?num=1')
+        fetch('/nutrients/?num=1', { method: 'get' })
         .then(res => res.json())
         .then(res => JSON.parse(res))
         .then(function(data){
-            let nutrients = [data[0].N1, data[0].N2, data[0].N3, data[0].N4]
+            console.log("NUTRIENT LEVEL DATA GET")
+            console.log(data)
+            let nutrients = [data.N1, data.N2, data.N3, data.N4]
             that.setState({
                 series: nutrients
             })

@@ -21,24 +21,17 @@ export default function SubsystemStatus() {
     const [node2, handleNode2Change] = useState(2)
     
     useEffect(() => {
-        fetch('/subsystem_status')
-        .then(res => res.json())
-        .then(res => JSON.parse(res))
-        .then(function(data){
-            handlePump1Change(data[0].pump1);
-            handlePump2Change(data[0].pump2);
-            handleNode1Change(data[0].node1);
-            handleNode2Change(data[0].node2);  
-        })
         const interval = setInterval(() => {
-            fetch('/subsystem_status')
+            fetch('/subsystem_status', { method: 'get' })
             .then(res => res.json())
             .then(res => JSON.parse(res))
             .then(function(data){
-                handlePump1Change(data[0].pump1);
-                handlePump2Change(data[0].pump2);
-                handleNode1Change(data[0].node1);
-                handleNode2Change(data[0].node2);  
+                console.log("SUBSYSTEM STATUS DATA GET")
+                console.log(data)
+                handlePump1Change(data.pump1);
+                handlePump2Change(data.pump2);
+                handleNode1Change(data.node1);
+                handleNode2Change(data.node2);  
             })
         }, 10000);
 

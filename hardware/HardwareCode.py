@@ -92,7 +92,8 @@ def read_base_water():
         distance = pulseDuration * 17150                #Calculate distance
         distance = round(distance, 2)                   #Round to two decimal points
 
-        if distance > 20 and distance < 400:            #Is distance within range
+        #if distance > 20 and distance < 400:            #Is distance within range
+        if distance < 400:
             print ("Distance:",distance - 0.5,"cm")     #Distance with calibration
             with lock:
                 base_water.value = distance
@@ -110,10 +111,16 @@ def update_database():
     curs = conn.cursor()
 
     while True:
+        print("READING WATER TIME")
+        curs.execute("SELECT hr FROM NODE1_WATER_FREQ")
+        print(curs.fetchall()[0][0])
+        curs.execute("SELECT min FROM NODE1_WATER_FREQ")
+        print(curs.fetchall()[0][0])
+
         #t = time.strftime("%H:%M:%S", time.localtime())
         t = int(round(time.time() * 1000))
         print("INSERTING INTO DB: ", t, base_water.value - 0.5)
-        curs.execute("INSERT INTO BASE_WATER(time, base_water) VALUES(?, ?)", (t, base_water.value - 0.5))
+        curs.execute("INSERT INTO PH(time, pH) VALUES(?, ?)", (t, base_water.value - 0.5))
 
         conn.commit()
         time.sleep(DB_UPDATE_INTERVAL)

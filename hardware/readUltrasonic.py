@@ -32,7 +32,8 @@ while(1):
     distance = pulseDuration * 17150             #Calculate distance
     distance = round(distance, 2)                 #Round to two decimal points
 
-    if distance > 20 and distance < 400:          #Is distance within range
+    #if distance > 20 and distance < 400:          #Is distance within range
+    if distance < 400:
         print ("Distance:",distance - 0.5,"cm")     #Distance with calibration
         t = time.strftime("%H:%M:%S", time.localtime())
         curs.execute("INSERT INTO timed(time, base_water) VALUES(?, ?)", (t, distance-0.5))

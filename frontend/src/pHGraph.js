@@ -3,7 +3,7 @@ import Chart from "react-apexcharts";
 import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
 
-export class BaseWaterGraph extends Component {
+export class PHGraph extends Component {
     constructor(){
         super();
 
@@ -34,7 +34,7 @@ export class BaseWaterGraph extends Component {
             },
             series: [
                 {
-                    name: "base_water",
+                    name: "pH",
                     data: []
                 }
             ]
@@ -43,13 +43,13 @@ export class BaseWaterGraph extends Component {
 
     fetchData = () => {
         const that = this;
-        fetch('/base_water/?num=100', { method: 'get' })
+        fetch('/pH/?num=100', { method: 'get' })
         .then(res => res.json())
         .then(res => JSON.parse(res))
         .then(function(data){
-            console.log("WATER LEVEL DATA GET")
+            console.log("pH LEVEL DATA GET")
             console.log(data)
-            let items = data.map(item => [item.time, item.base_water]);
+            let items = data.map(item => [item.time, item.pH]);
             that.setState({
                 series: [
                     {
@@ -70,7 +70,7 @@ export class BaseWaterGraph extends Component {
             <div>
                 <Typography variant='h6'>
                     <Box fontWeight="fontWeightBold">
-                        Base Station Water Level
+                        pH Level
                     </Box>
                 </Typography>
                 <div className="app">

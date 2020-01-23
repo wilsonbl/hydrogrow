@@ -3,13 +3,15 @@ var router = express.Router();
 
 var sqlite = require('better-sqlite3');
 
-/* Subsystem status data */
+/* pH data */
 router.get('/', (req, res) => {
     var db = new sqlite("./database/HydroDatabase.db");
-    var rows = db.prepare("SELECT node1, node2, pump1, pump2 FROM SUBSYSTEM_STATUS").all();
+    var rows = db.prepare("SELECT time, pH FROM PH ORDER BY time DESC LIMIT " + req.query.num).all();
+    rows.reverse()
     db.close()
 
-    res.json(JSON.stringify(rows[0]));
+    sensorData = JSON.stringify(rows);
+    res.json(sensorData);
 });
 
 module.exports = router;

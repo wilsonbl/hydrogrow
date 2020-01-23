@@ -25,14 +25,15 @@ const useStyles = makeStyles(theme => ({
 }));
 
 
-export default function WaterFreq() {
+export default function Node2WaterFreq() {
     const classes = useStyles();
     const [selectedDateTime, handleDateTimeChange] = useState(new Date());
     const [selectedHr, handleHrChange] = useState(0);
     const [selectedMin, handleMinChange] = useState(0);
 
     const sendDateTime = () => {
-        fetch('/water_freq', { 
+        console.log("POST sending node 2 hr: " + selectedHr + " min: " + selectedMin + " date/time: " + selectedDateTime)
+        fetch('/node2_water_freq', { 
             method: 'post', 
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({command: 'freq_update', hr: selectedHr, min: selectedMin, start: selectedDateTime})
@@ -44,7 +45,7 @@ export default function WaterFreq() {
 
     
     useEffect(() => {
-        fetch('/water_freq')
+        fetch('/node2_water_freq')
         .then(res => res.json())
         .then(res => JSON.parse(res))
         .then(function(data){
@@ -58,7 +59,7 @@ export default function WaterFreq() {
         <div>
             <Typography variant='h6' className={classes.title}>
                 <Box fontWeight="fontWeightBold">
-                    Node 1 Watering Schedule
+                    Node 2 Watering Schedule
                 </Box>
             </Typography>
             <br />

@@ -6,11 +6,11 @@ var sqlite = require('better-sqlite3');
 /* Sensor data */
 router.get('/', (req, res) => {
     var db = new sqlite("./database/HydroDatabase.db");
-    var rows = db.prepare("SELECT time, N1, N2, N3, N4 FROM NUTRIENTS ORDER BY time DESC LIMIT " + req.query.num).all();
+    var rows = db.prepare("SELECT N1, N2, N3, N4 FROM NUTRIENTS ORDER BY time DESC LIMIT " + req.query.num).all();
     rows.reverse()
     db.close()
 
-    sensorData = JSON.stringify(rows);
+    sensorData = JSON.stringify(rows[0]);
     res.json(sensorData);
 });
 router.post('/', (req) => {
