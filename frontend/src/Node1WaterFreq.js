@@ -32,7 +32,7 @@ export default function Node1WaterFreq() {
     const [selectedMin, handleMinChange] = useState(0);
 
     const sendDateTime = () => {
-        console.log("POST sending node 1 hr: " + selectedHr + " min: " + selectedMin + " date/time: " + selectedDateTime)
+        console.log("POST sending node 1 hr: " + selectedHr + " min: " + selectedMin + " date/time: " + selectedDateTime )
         fetch('/node1_water_freq', { 
             method: 'post', 
             headers: {'Content-Type': 'application/json'},

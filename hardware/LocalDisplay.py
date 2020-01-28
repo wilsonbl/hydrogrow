@@ -18,11 +18,11 @@ lcd = character_lcd.Character_LCD_RGB_I2C(i2c, lcd_columns, lcd_rows)
 
 # Display startup message
 lcd.color = [100, 0, 0]
-lcd.create_char(1, [0,0,1,1,2,1,7,8])
-lcd.create_char(2, [0,24,4,18,9,5,21,9])
-lcd.create_char(3, [0,23,8,20,19,8,6,1])
-lcd.create_char(4, [0,1,17,17,1,2,4,24])
-lcd.message = '\x01\x02  READY TO  \x01\x02\n\x03\x04    GROW    \x03\x04'
+lcd.create_char(0, [0,0,1,1,2,1,7,8])
+lcd.create_char(1, [0,24,4,18,9,5,21,9])
+lcd.create_char(2, [0,23,8,20,19,8,6,1])
+lcd.create_char(3, [0,1,17,17,1,2,4,24])
+lcd.message = '\x00\x01  READY TO  \x00\x01\n\x02\x03    GROW    \x02\x03'
 lcd.clear()
 
 async def get_data():
