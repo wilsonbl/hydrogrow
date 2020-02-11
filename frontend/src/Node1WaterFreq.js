@@ -68,7 +68,7 @@ export default function Node1WaterFreq() {
             </Typography>
             <TextField
                 className={classes.textField}
-                type="hours"
+                type="number"
                 size="small"
                 InputLabelProps={{
                     shrink: true,
@@ -83,7 +83,7 @@ export default function Node1WaterFreq() {
             />
             <TextField
                 className={classes.textField}
-                type="mins"
+                type="number"
                 size="small"
                 InputLabelProps={{
                     shrink: true,

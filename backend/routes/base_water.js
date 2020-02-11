@@ -3,7 +3,6 @@ var router = express.Router();
 
 var sqlite = require('better-sqlite3');
 
-/* Sensor data */
 router.get('/', (req, res) => {
     var db = new sqlite("./database/HydroDatabase.db");
     var rows = db.prepare("SELECT time, base_water FROM BASE_WATER ORDER BY time DESC LIMIT " + req.query.num).all();
@@ -13,6 +12,7 @@ router.get('/', (req, res) => {
     sensorData = JSON.stringify(rows);
     res.json(sensorData);
 });
+
 router.post('/', (req) => {
     if (req.body.command == 'reset') {
         console.log("Resetting :D")
