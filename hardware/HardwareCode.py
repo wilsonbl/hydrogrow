@@ -47,7 +47,7 @@ node1_status = multiprocessing.Value('i', 0)
 node2_status = multiprocessing.Value('i', 0)
 pump1_status = multiprocessing.Value('i', 0)
 pump2_status = multiprocessing.Value('i', 0)
-
+fill_time_limit = multiprocessing.Value('i', 10)
 # Pin initialization
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(TRIG, GPIO.OUT)
@@ -166,9 +166,15 @@ def read_EC():
     while True:
         ec.value = random.randint(0, 10)
         time.sleep(1)
-
+    
 
 #-----------------------------------WATERING----------------------------------
+def fill_tray():
+    start_time = time.time()
+    while(time.time() - start_time < fill_time_limit.value): #OR UPPER SENSOR TRIGGERED
+        print("FILLING TRAY")
+        time.sleep(1)
+
 def node1_water_cycle():
     while True:
         if node1_water_start.value.decode("utf-8") != '':
@@ -264,6 +270,69 @@ def read_database():
         
         time.sleep(DB_READ_INTERVAL)
 
+def read_config():
+    conn = sqlite3.connect('../backend/database/HydroDatabase.db')
+    curs = conn.cursor()
+
+    curs.execute("SELECT fill_time_limit FROM CONFIG")
+    fill_time_limit.value = int(curs.fetchall()[0][0])
+
+    conn.close()
+
+
+#---------------------------------DIAGNOSTICS---------------------------------
+def test_nodes():
+    #Send x messages. If no response throw node error
+    print("TESTING NODES")
+    time.sleep(5)
+    return False
+
+def test_valves():
+    #Send x valve open commands. If error, throw node valve fail error
+    print("TESTING VALVES")
+    time.sleep(5)
+    return False
+
+def test_pumps():
+    #Turn main pump on and check output flow sensor. If flowrate = 0, throw pump error. If flowrate <= 0.5*(avg_flowrate), throw clog/leak error
+    print("TESTING PUMPS")
+    time.sleep(5)
+    return False
+
+def test_trays():
+    #Meant to be run after test_pumps (or whenever you're expecting water to be in a node).
+    #Check node tray bottom sensors. If any == 0, throw clog/leak error
+    print("TESTING TRAYS")
+    time.sleep(5)
+    return False
+
+def test_pH():
+    #Send x messages requesting pH info. If error, throw pH error
+    print("TESTING pH")
+    time.sleep(5)
+    return False
+
+def test_EC():
+    #Send x messages requesting EC info. If error, throw EC error.
+    print("TESTING EC")
+    time.sleep(5)
+    return False
+
+def startup_diagnostics():
+    read_config()
+    test_nodes()
+    test_valves()
+    print("MAIN PUMP VALVE OPEN")
+    print("NODE VALVE OPEN")
+    print("MAIN PUMP ON")
+    print("FILLING TRAYS")
+    time.sleep(15)
+    test_trays()
+    fill_tray()
+    print("MAIN PUMP VALVE CLOSE")
+    print("MAIN PUMP OFF")
+
+
 #-----------------------------------CLEANUP-----------------------------------
 #@atexit.register
 def cleanup():
@@ -275,6 +344,8 @@ def cleanup():
 
 #-------------------------------------MAIN-------------------------------------
 def main():
+    startup_diagnostics()
+
     # Display startup message
     lcd.message = '\x00\x01  READY TO  \x00\x01\n\x02\x03    GROW    \x02\x03'
     time.sleep(2)
