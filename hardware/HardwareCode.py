@@ -13,6 +13,7 @@ from datetime import datetime, timezone, timedelta
 import pytz
 import random
 import math
+import subprocess
 
 
 #-----------------------------------SETUP-------------------------------------
@@ -48,6 +49,7 @@ node2_status = multiprocessing.Value('i', 0)
 pump1_status = multiprocessing.Value('i', 0)
 pump2_status = multiprocessing.Value('i', 0)
 fill_time_limit = multiprocessing.Value('i', 10)
+
 # Pin initialization
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(TRIG, GPIO.OUT)
@@ -280,7 +282,42 @@ def read_config():
     conn.close()
 
 
-#---------------------------------DIAGNOSTICS---------------------------------
+#---------------------------------CALIBRATION---------------------------------
+def setup_wifi():
+    lcd.message = "SELECT > WiFi\nOTHER > Continue"
+    selection = 0
+    while selection == 0:
+        if lcd.up_button or lcd.down_button or lcd.left_button or lcd.right_button:
+            selection = 1
+        elif lcd.select_button:
+            selection = 2
+        time.sleep(0.2)
+
+    if selection == 2:
+        lcd.clear()
+        lcd.message = "Router WPS > Con\nSELECT > Cancel"
+        subprocess.Popen(["wpa_cli", "-i", "wlan0", "wps_pbc"])
+        time.sleep(5)
+        
+        while True:
+            try:
+                ps = subprocess.run(['iwgetid', '-r'], universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                network = str(ps.stdout)
+                if network != "\\n" and network != "":
+                    lcd.clear()
+                    lcd.message = "Connected to \n" + network
+                    time.sleep(2)
+                    break
+            except subprocess.CalledProcessError:
+                print("WPS connection error")
+            
+            if lcd.select_button:
+                subprocess.Popen(["wpa_cli", "-i", "wlan0", "wps_cancel"])
+                break
+
+            time.sleep(0.2) 
+
+
 def test_nodes():
     #Send x messages. If no response throw node error
     print("TESTING NODES")
@@ -319,18 +356,29 @@ def test_EC():
     return False
 
 def startup_diagnostics():
-    read_config()
-    test_nodes()
-    test_valves()
-    print("MAIN PUMP VALVE OPEN")
-    print("NODE VALVE OPEN")
-    print("MAIN PUMP ON")
-    print("FILLING TRAYS")
-    time.sleep(15)
-    test_trays()
-    fill_tray()
-    print("MAIN PUMP VALVE CLOSE")
-    print("MAIN PUMP OFF")
+    lcd.clear()
+    lcd.message = "SELECT > Diags\nOTHER > Continue"
+    selection = 0
+    while selection == 0:
+        if lcd.up_button or lcd.down_button or lcd.left_button or lcd.right_button:
+            selection = 1
+        elif lcd.select_button:
+            selection = 2
+        time.sleep(0.2)
+
+    if selection == 2:
+        read_config()
+        test_nodes()
+        test_valves()
+        print("MAIN PUMP VALVE OPEN")
+        print("NODE VALVE OPEN")
+        print("MAIN PUMP ON")
+        print("FILLING TRAYS")
+        time.sleep(15)
+        test_trays()
+        fill_tray()
+        print("MAIN PUMP VALVE CLOSE")
+        print("MAIN PUMP OFF")
 
 
 #-----------------------------------CLEANUP-----------------------------------
@@ -344,6 +392,7 @@ def cleanup():
 
 #-------------------------------------MAIN-------------------------------------
 def main():
+    setup_wifi()
     startup_diagnostics()
 
     # Display startup message
