@@ -31,6 +31,9 @@ export class PHGraph extends Component {
                       format: 'HH:mm dd MMM yyyy'
                     }
                   },
+                yaxis: {
+                    decimalsInFloat: 0
+                },
             },
             series: [
                 {

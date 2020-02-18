@@ -107,6 +107,7 @@ export default function Node2WaterFreq() {
                     onChange={handleDateTimeChange}
                     showTodayButton
                     inputVariant="outlined"
+                    minDateMessage=""
                 />
             </MuiPickersUtilsProvider>
             <br />

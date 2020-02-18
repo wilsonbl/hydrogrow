@@ -30,7 +30,10 @@ export class BaseWaterGraph extends Component {
                     x: {
                       format: 'HH:mm dd MMM yyyy'
                     }
-                  },
+                },
+                yaxis: {
+                    decimalsInFloat: 0
+                },
             },
             series: [
                 {
