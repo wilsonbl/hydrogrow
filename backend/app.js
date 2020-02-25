@@ -12,6 +12,7 @@ var nutrientsRouter = require('./routes/nutrients');
 var node1_water_freqRouter = require('./routes/node1_water_freq');
 var node2_water_freqRouter = require('./routes/node2_water_freq');
 var subsystem_statusRouter = require('./routes/subsystem_status');
+var desired_pHRouter = require('./routes/desired_pH');
 
 var app = express();
 
@@ -33,6 +34,7 @@ app.use('/nutrients', nutrientsRouter)
 app.use('/node1_water_freq', node1_water_freqRouter)
 app.use('/node2_water_freq', node2_water_freqRouter)
 app.use('/subsystem_status', subsystem_statusRouter)
+app.use('/desired_pH', desired_pHRouter)
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
