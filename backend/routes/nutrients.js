@@ -5,7 +5,7 @@ var sqlite = require('better-sqlite3');
 
 router.get('/', (req, res) => {
     var db = new sqlite("./database/HydroDatabase.db");
-    var rows = db.prepare("SELECT N1, N2, N3, N4 FROM NUTRIENTS ORDER BY time DESC LIMIT " + req.query.num).all();
+    var rows = db.prepare("SELECT N1, N2, N3, N4, N5 FROM NUTRIENTS ORDER BY time DESC LIMIT " + req.query.num).all();
     rows.reverse()
     db.close()
 

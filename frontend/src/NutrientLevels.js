@@ -8,7 +8,7 @@ export class NutrientLevels extends Component {
         super();
 
         this.state = {
-            series: [0, 0, 0, 0],
+            series: [0, 0, 0, 0, 0],
             options: {
                 chart: {
                     type: 'radialBar'
@@ -28,7 +28,7 @@ export class NutrientLevels extends Component {
                         }
                     }
                 },
-                labels: ['N1', 'N2', 'N3', 'N4'],
+                labels: ['N1', 'N2', 'N3', 'N4', 'N5'],
             }
         };
     }
@@ -41,7 +41,7 @@ export class NutrientLevels extends Component {
         .then(function(data){
             console.log("NUTRIENT LEVEL DATA GET")
             console.log(data)
-            let nutrients = [data.N1, data.N2, data.N3, data.N4]
+            let nutrients = [data.N1, data.N2, data.N3, data.N4, data.N5]
             that.setState({
                 series: nutrients
             })

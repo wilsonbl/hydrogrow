@@ -22,25 +22,25 @@ const useStyles = makeStyles(theme => ({
     }
 }));
 
-export default function PHInput() {
+export default function ECInput() {
     const classes = useStyles();
-    const [selectedPH, handlePHChange] = useState(6)
+    const [selectedEC, handleECChange] = useState(6)
 
-    const sendPH = () => {
-        console.log("POST sending pH: " + selectedPH)
-        fetch('/desired_pH', { 
+    const sendEC = () => {
+        console.log("POST sending EC: " + selectedEC)
+        fetch('/desired_EC', { 
             method: 'post', 
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({command: 'pH_update', pH: selectedPH})
+            body: JSON.stringify({command: 'EC_update', EC: selectedEC})
         })
     }
 
     useEffect(() => {
-        fetch('/desired_pH')
+        fetch('/desired_EC')
         .then(res => res.json())
         .then(res => JSON.parse(res))
         .then(function(data){
-            handlePHChange(data[0].pH)
+            handleECChange(data[0].EC)
         })
     }, []);
 
@@ -48,7 +48,7 @@ export default function PHInput() {
         <div>
             <Typography variant='h6' className={classes.title}>
                 <Box fontWeight="fontWeightBold">
-                    Desired pH Level
+                    Desired EC Level
                 </Box>
             </Typography>
             <br />
@@ -57,18 +57,18 @@ export default function PHInput() {
                 className={classes.slider}
                 defaultValue={6}
                 valueLabelDisplay="on"
-                step={0.1}
-                min={5}
-                max={7}
-                onChange={(event, value) => handlePHChange(value)}
-                value={selectedPH}
+                step={0.05}
+                min={0.75}
+                max={2.5}
+                onChange={(event, value) => handleECChange(value)}
+                value={selectedEC}
             />
             <br />
             <Button
                 variant="contained"
                 color="primary"
                 className={classes.button}
-                onClick={sendPH}
+                onClick={sendEC}
             >
                 Update
             </Button>

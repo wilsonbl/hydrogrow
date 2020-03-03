@@ -11,6 +11,7 @@ import SubsystemStatus from "./SubsystemStatus";
 import {PHGraph} from "./pHGraph";
 import {ECGraph} from "./ECGraph";
 import PHInput from "./pHInput";
+import ECInput from "./ECInput";
 
 const useStyles = makeStyles(theme => ({
     root: {
@@ -61,6 +62,11 @@ export default function CardGrid(){
                 <Grid item xs={4} sm={4} md={4} lg={4} xl={4}>
                     <Paper>
                         <PHInput />
+                    </Paper>
+                </Grid>
+                <Grid item xs={4} sm={4} md={4} lg={4} xl={4}>
+                    <Paper>
+                        <ECInput />
                     </Paper>
                 </Grid>
             </Grid>
