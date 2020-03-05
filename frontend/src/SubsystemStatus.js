@@ -60,7 +60,7 @@ export default function SubsystemStatus() {
                 </Box>
                 
             </Typography>
-            <Grid container spacing={3} justify="flex-start">
+            <Grid container spacing={3} justify="center">
                 <Grid item>
                     <Typography className={classes.typography}>
                         Node 1 Comms
@@ -89,8 +89,6 @@ export default function SubsystemStatus() {
                     {valve1 == 1 && <CheckIcon />}
                     {valve1 == 0 && <ErrorIcon />}
                 </Grid>
-            </Grid>
-            <Grid container spacing={3} justify="flex-start">
                 <Grid item>
                     <Typography className={classes.typography}>
                         Node 2 Comms
@@ -119,8 +117,6 @@ export default function SubsystemStatus() {
                     {valve2 == 1 && <CheckIcon />}
                     {valve2 == 0 && <ErrorIcon />}
                 </Grid>
-            </Grid>
-            <Grid container spacing={3} justify="flex-start">
                 <Grid item>
                     <Typography className={classes.typography}>
                         pH Sensor

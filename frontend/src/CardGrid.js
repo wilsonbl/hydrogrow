@@ -15,58 +15,64 @@ import ECInput from "./ECInput";
 
 const useStyles = makeStyles(theme => ({
     root: {
-      flexGrow: 1
+      flexGrow: 1,
     },
-    paper: {
-        padding: theme.spacing(2)
-    }
+    inputs: {
+        height: "100%"
+    },
 }));
 
 export default function CardGrid(){
     const classes = useStyles();
-    const graphHeightPaper = clsx(classes.paper, classes.graphHeight)
 
     return(
         <div className = {classes.root}>
-            <Grid container spacing={2} >
-                <Grid item xs={4} sm={4} md={4} lg={4} xl={4}>
+            <Grid container spacing={2} alignItems="stretch">
+                <Grid item xs >
                     <Paper>
                         <BaseWaterGraph />
                     </Paper>
                 </Grid>
-                <Grid item xs={4} sm={4} md={4} lg={4} xl={4}>
+                <Grid item xs >
                     <Paper>
                         <PHGraph />
                     </Paper>
                 </Grid>
-                <Grid item xs={4} sm={4} md={4} lg={4} xl={4}>
+                <Grid item xs>
                     <Paper>
-                        <NutrientLevels />
+                        <ECGraph />
                     </Paper>
                 </Grid>
-                <Grid item xs={4} sm={4} md={4} lg={4} xl={4}>
+            </Grid>
+            <Grid container spacing={2} alignItems="stretch" >
+                <Grid item xs >
                     <Paper>
-                        <Node1WaterFreq />
+                        <Node1WaterFreq className={classes.inputs}/>
                     </Paper>
                 </Grid>
-                <Grid item xs={4} sm={4} md={4} lg={4} xl={4}>
+                <Grid item xs >
                     <Paper>
                         <Node2WaterFreq />
                     </Paper>
                 </Grid>
-                <Grid item xs={4} sm={4} md={4} lg={4} xl={4}>
-                    <Paper>
-                        <SubsystemStatus />
-                    </Paper>
-                </Grid>
-                <Grid item xs={4} sm={4} md={4} lg={4} xl={4}>
+                <Grid item xs>
                     <Paper>
                         <PHInput />
                     </Paper>
-                </Grid>
-                <Grid item xs={4} sm={4} md={4} lg={4} xl={4}>
                     <Paper>
                         <ECInput />
+                    </Paper>
+                </Grid>
+                <Grid item xs>
+                    <Paper>
+                        <NutrientLevels />
+                    </Paper>
+                </Grid>
+            </Grid>
+            <Grid container spacing={2} alignItems="stretch" justify="center" >
+                <Grid item xs={10}>
+                    <Paper>
+                        <SubsystemStatus />
                     </Paper>
                 </Grid>
             </Grid>

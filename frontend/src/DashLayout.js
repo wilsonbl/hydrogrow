@@ -17,6 +17,7 @@ import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
 import SettingsIcon from '@material-ui/icons/Settings';
 import CardGrid from './CardGrid'
+import { Link } from 'react-router-dom'
 
 const drawerWidth = 240;
 
@@ -98,7 +99,7 @@ const useStyles = makeStyles(theme => ({
 
 export default function DashLayout() {
     const classes = useStyles();
-    const [open, setOpen] = React.useState(true);
+    const [open, setOpen] = React.useState(false);
     const handleDrawerOpen = () => {
         setOpen(true);
       };
@@ -110,15 +111,18 @@ export default function DashLayout() {
         <div className={classes.root}>
             <AppBar position="absolute" className={clsx(classes.appBar, open && classes.appBarShift)}>
                 <Toolbar className={classes.toolbar}>
-                    <IconButton
+                    {/*
+                        <IconButton
                         edge="start"
                         color="inherit"
                         aria-label="open drawer"
                         onClick={handleDrawerOpen}
                         className={clsx(classes.menuButton, open && classes.menuButtonHidden)}
-                    >
-                        <MenuIcon />
-                    </IconButton>
+                        >
+                            <MenuIcon />
+                        </IconButton>
+                    */}
+                    
                     <Typography component="h1" variant="h6" color="inherit" noWrap className={classes.title}>
                         Hydrogrow Dashboard
                     </Typography>
@@ -131,11 +135,11 @@ export default function DashLayout() {
                 }}
                 open={open}
             >
-                <div className={classes.toolbarIcon}>
+                  <div className={classes.toolbarIcon}>
                     <IconButton onClick={handleDrawerClose}>
                         <ChevronLeftIcon />
                     </IconButton>
-                </div>
+                    </div>  
                 <Divider />
                 <List>
                     <div>
@@ -146,13 +150,7 @@ export default function DashLayout() {
                             <ListItemText primary="Home"/>
                         </ListItem>
                         <ListItem>
-                            <ListItemIcon>
-                                <AssessmentIcon />
-                            </ListItemIcon>
-                            <ListItemText primary="Reports"/>
-                        </ListItem>
-                        <ListItem>
-                            <ListItemIcon>
+                            <ListItemIcon component={Link} to="/settings" >
                                 <SettingsIcon />
                             </ListItemIcon>
                             <ListItemText primary="Settings"/>
