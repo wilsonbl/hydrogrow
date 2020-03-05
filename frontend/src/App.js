@@ -1,7 +1,6 @@
 import React, {Component} from 'react';
 import './App.css';
 import CssBaseline from '@material-ui/core/CssBaseline';
-import CardGrid from './CardGrid'
 import DashLayout from './DashLayout'
 
 class App extends Component {

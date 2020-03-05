@@ -36,6 +36,7 @@ nutrient_1 = multiprocessing.Value('d', 0.0)
 nutrient_2 = multiprocessing.Value('d', 0.0)
 nutrient_3 = multiprocessing.Value('d', 0.0)
 nutrient_4 = multiprocessing.Value('d', 0.0)
+nutrient_5 = multiprocessing.Value('d', 0.0)
 node1_water_start = multiprocessing.Array(c_char, 40)
 node1_water_hr = multiprocessing.Value('i', 0)
 node1_water_min = multiprocessing.Value('i', 0)
@@ -45,9 +46,15 @@ node2_water_hr = multiprocessing.Value('i', 0)
 node2_water_min = multiprocessing.Value('i', 0)
 node2_watering = multiprocessing.Value('i', 0)
 node1_status = multiprocessing.Value('i', 0)
-node2_status = multiprocessing.Value('i', 0)
 pump1_status = multiprocessing.Value('i', 0)
+valve1_status = multiprocessing.Value('i', 0)
+leak1_status = multiprocessing.Value('i', 0)
+node2_status = multiprocessing.Value('i', 0)
 pump2_status = multiprocessing.Value('i', 0)
+valve2_status = multiprocessing.Value('i', 0)
+leak2_status = multiprocessing.Value('i', 0)
+pH_status = multiprocessing.Value('i', 0)
+EC_status = multiprocessing.Value('i', 0)
 fill_time_limit = multiprocessing.Value('i', 10)
 
 # Pin initialization
@@ -60,13 +67,13 @@ lcd_columns = 16
 lcd_rows = 2
 i2c = busio.I2C(board.SCL, board.SDA)
 lcd = character_lcd.Character_LCD_RGB_I2C(i2c, lcd_columns, lcd_rows)
-lcd.create_char(0, [0,0,1,1,2,1,7,8])
-lcd.create_char(1, [0,24,4,18,9,5,21,9])
-lcd.create_char(2, [0,23,8,20,19,8,6,1])
-lcd.create_char(3, [0,1,17,17,1,2,4,24])
-lcd.create_char(4, [0,4,14,31,31,31,14,0])
-lcd.create_char(5, [0,0,27,14,4,14,27,0])
-lcd.create_char(6, [0,31,31,31,31,31,31,31])
+lcd.create_char(0, [0,0,1,1,2,1,7,8])       # OK 1
+lcd.create_char(1, [0,24,4,18,9,5,21,9])    # OK 2
+lcd.create_char(2, [0,23,8,20,19,8,6,1])    # OK 3
+lcd.create_char(3, [0,1,17,17,1,2,4,24])    # OK 4
+lcd.create_char(4, [0,4,14,31,31,31,14,0])  # Water Drop
+lcd.create_char(5, [0,0,27,14,4,14,27,0])   # X
+lcd.create_char(6, [0,0,1,3,22,28,8,0])     # Check
 
 # Email initialization
 port = 465
@@ -82,14 +89,11 @@ def local_display(i2c, lcd, state):
     state.value = 0
     while True:
         if state.value == 0:
-            #lcd.message = ""
-            #lcd.message = "\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\n\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06"
             lcd.message = "BW EC pH       {}\n{:0>2d} {:0>2d} {:0>2d}       {}".format("\x04" if node1_watering.value else "\x05", int(base_water.value), int(ec.value), int(pH.value), "\x04" if node2_watering.value else "\x05")
         elif state.value == 1:
-            lcd.message = "N1 N2 N3 N4    {}\n{:0>2d} {:0>2d} {:0>2d} {:0>2d}    {}".format("\x04" if node1_watering.value else "\x05", int(nutrient_1.value), int(nutrient_2.value), int(nutrient_3.value), int(nutrient_4.value), "\x04" if node2_watering.value else "\x05")
+            lcd.message = "N1 N2 N3 N4 N5 {}\n{:0>2d} {:0>2d} {:0>2d} {:0>2d} {:0>2d} {}".format("\x04" if node1_watering.value else "\x05", int(nutrient_1.value), int(nutrient_2.value), int(nutrient_3.value), int(nutrient_4.value),  int(nutrient_5.value), "\x04" if node2_watering.value else "\x05")
         elif state.value == 2:
-            lcd.message = "N1 N2 P1 P2    {}\n{:0>2d} {:0>2d} {:0>2d} {:0>2d}    {}".format("\x04" if node1_watering.value else "\x05", int(node1_status.value), int(node2_status.value), int(pump1_status.value), int(pump2_status.value), "\x04" if node2_watering.value else "\x05")
-        
+            lcd.message = "CPVL CPVL pE   {}\n{}{}{}{} {}{}{}{} {}{}   {}".format("\x04" if node1_watering.value else "\x05", "\x06" if node1_status.value else "\x05", "\x06" if pump1_status.value else "\x05", "\x06" if valve1_status.value else "\x05", "\x06" if leak1_status.value else "\x05", "\x06" if node2_status.value else "\x05", "\x06" if pump2_status.value else "\x05", "\x06" if valve2_status.value else "\x05", "\x06" if leak2_status.value else "\x05", "\x06" if pH_status.value else "\x05", "\x06" if EC_status.value else "\x05", "\x04" if node2_watering.value else "\x05")
         time.sleep(0.2)
 
 
@@ -180,22 +184,21 @@ def fill_tray():
 def node1_water_cycle():
     while True:
         if node1_water_start.value.decode("utf-8") != '':
-            #Read water cycle datetime and convert to UTC
+            # Read water cycle datetime and convert to UTC
             node1_datetime = datetime.strptime(node1_water_start.value.decode("utf-8"), '%Y-%m-%dT%H:%M:%S.%fZ')
             node1_datetime = node1_datetime.replace(tzinfo=pytz.UTC, second=0)
 
-            #Calculate the diff between the current datetime and the cycle start datetime in mins
+            # Calculate the diff between the current datetime and the cycle start datetime in mins
             datetime_diff = datetime.now(timezone.utc) - node1_datetime
             diff_min = datetime_diff.total_seconds()//60
             node1_cycle_min = node1_water_hr.value*60 + node1_water_min.value
 
-            print("NODE 1", diff_min, node1_cycle_min)
-            #Start watering if current datetime is a) greater than start datetime and b) a multiple of the cycle time
+            # Start watering if current datetime is a) greater than start datetime and b) a multiple of the cycle time
             if diff_min >= 0 and diff_min % node1_cycle_min == 0:
-                print("START NODE 1 WATER CYCLE")
+                #print("START NODE 1 WATER CYCLE")
                 node1_watering.value = 1
             else:
-                print("DON'T START NODE 1 WATER CYCLE")
+                #print("DON'T START NODE 1 WATER CYCLE")
                 node1_watering.value = 0
         time.sleep(1)
 
@@ -203,22 +206,21 @@ def node1_water_cycle():
 def node2_water_cycle():
     while True:
         if node2_water_start.value.decode("utf-8") != '':
-            #Read water cycle datetime and convert to UTC
+            # Read water cycle datetime and convert to UTC
             node2_datetime = datetime.strptime(node2_water_start.value.decode("utf-8"), '%Y-%m-%dT%H:%M:%S.%fZ')
             node2_datetime = node2_datetime.replace(tzinfo=pytz.UTC, second=0)
 
-            #Calculate the diff between the current datetime and the cycle start datetime in mins
+            # Calculate the diff between the current datetime and the cycle start datetime in mins
             datetime_diff = datetime.now(timezone.utc) - node2_datetime
             diff_min = datetime_diff.total_seconds()//60
             node2_cycle_min = node2_water_hr.value*60 + node2_water_min.value
 
-            print("NODE 2", diff_min, node2_cycle_min)
-            #Start watering if current datetime is a) greater than start datetime and b) a multiple of the cycle time
+            # Start watering if current datetime is a) greater than start datetime and b) a multiple of the cycle time
             if diff_min >= 0 and diff_min % node2_cycle_min == 0:
-                print("START NODE 2 WATER CYCLE")
+                #print("START NODE 2 WATER CYCLE")
                 node2_watering.value = 1
             else:
-                print("DON'T START NODE 2 WATER CYCLE")
+                #print("DON'T START NODE 2 WATER CYCLE")
                 node2_watering.value = 0
         time.sleep(1)
 
@@ -242,6 +244,7 @@ def read_database():
     curs = conn.cursor()
 
     while True:
+        # Node 1 watering frequency
         curs.execute("SELECT hr FROM NODE1_WATER_FREQ")
         with lock:
             node1_water_hr.value = int(curs.fetchall()[0][0])
@@ -252,6 +255,7 @@ def read_database():
         with lock:
             node1_water_start.value = curs.fetchall()[0][0].encode()
 
+        # Node 2 watering frequency
         curs.execute("SELECT hr FROM NODE2_WATER_FREQ")
         with lock:
             node2_water_hr.value = int(curs.fetchall()[0][0])
@@ -262,13 +266,34 @@ def read_database():
         with lock:
             node2_water_start.value = curs.fetchall()[0][0].encode()
 
-        curs.execute("SELECT * FROM SUBSYSTEM_STATUS")
+        # Nutrient levels
+        curs.execute("SELECT N1, N2, N3, N4, N5 FROM NUTRIENTS")
+        nutrients = list(curs.fetchall()[0])
+        # If nutrient levels == 100, they screw up the formatting on the local display. Round down to 99.
+        for i in range(len(nutrients)):
+            if nutrients[i] == 100:
+                nutrients[i] = 99
+        with lock:
+            nutrient_1.value = nutrients[0]
+            nutrient_2.value = nutrients[1]
+            nutrient_3.value = nutrients[2]
+            nutrient_4.value = nutrients[3]
+            nutrient_5.value = nutrients[4]
+
+        # Subsystem status
+        curs.execute("SELECT node1, node2, pump1, pump2, node1Leak, node2Leak, valve1, valve2, pH, EC FROM SUBSYSTEM_STATUS")
         subsystem_status = curs.fetchall()[0]
         with lock:
             node1_status.value = subsystem_status[0]
             node2_status.value = subsystem_status[1]
             pump1_status.value = subsystem_status[2]
             pump2_status.value = subsystem_status[3]
+            leak1_status.value = subsystem_status[4]
+            leak2_status.value = subsystem_status[5]
+            valve1_status.value = subsystem_status[6]
+            valve2_status.value = subsystem_status[7]
+            pH_status.value = subsystem_status[8]
+            EC_status.value = subsystem_status[9]
         
         time.sleep(DB_READ_INTERVAL)
 
@@ -319,38 +344,38 @@ def setup_wifi():
 
 
 def test_nodes():
-    #Send x messages. If no response throw node error
+    # Send x messages. If no response throw node error
     print("TESTING NODES")
     time.sleep(5)
     return False
 
 def test_valves():
-    #Send x valve open commands. If error, throw node valve fail error
+    # Send x valve open commands. If error, throw node valve fail error
     print("TESTING VALVES")
     time.sleep(5)
     return False
 
 def test_pumps():
-    #Turn main pump on and check output flow sensor. If flowrate = 0, throw pump error. If flowrate <= 0.5*(avg_flowrate), throw clog/leak error
+    # Turn main pump on and check output flow sensor. If flowrate = 0, throw pump error. If flowrate <= 0.5*(avg_flowrate), throw clog/leak error
     print("TESTING PUMPS")
     time.sleep(5)
     return False
 
 def test_trays():
-    #Meant to be run after test_pumps (or whenever you're expecting water to be in a node).
-    #Check node tray bottom sensors. If any == 0, throw clog/leak error
+    # Meant to be run after test_pumps (or whenever you're expecting water to be in a node).
+    # Check node tray bottom sensors. If any == 0, throw clog/leak error
     print("TESTING TRAYS")
     time.sleep(5)
     return False
 
 def test_pH():
-    #Send x messages requesting pH info. If error, throw pH error
+    # Send x messages requesting pH info. If error, throw pH error
     print("TESTING pH")
     time.sleep(5)
     return False
 
 def test_EC():
-    #Send x messages requesting EC info. If error, throw EC error.
+    # Send x messages requesting EC info. If error, throw EC error.
     print("TESTING EC")
     time.sleep(5)
     return False
@@ -382,12 +407,12 @@ def startup_diagnostics():
 
 
 #-----------------------------------CLEANUP-----------------------------------
-#@atexit.register
+'''@atexit.register
 def cleanup():
     lcd.clear()
     #conn.close()
     #GPIO.cleanup()
-    print("See ya later! :D")
+    print("See ya later! :D")'''
 
 
 #-------------------------------------MAIN-------------------------------------

@@ -5,7 +5,6 @@ import Grid from '@material-ui/core/Grid';
 import CheckIcon from '@material-ui/icons/Check';
 import ErrorIcon from '@material-ui/icons/Error';
 import Box from '@material-ui/core/Box';
-import Paper from '@material-ui/core/Paper';
 
 const useStyles = makeStyles(theme => ({
     typography: {
@@ -65,71 +64,71 @@ export default function SubsystemStatus() {
                     <Typography className={classes.typography}>
                         Node 1 Comms
                     </Typography>
-                    {node1 == 1 && <CheckIcon />}
-                    {node1 == 0 && <ErrorIcon />}
+                    {node1 === 1 && <CheckIcon />}
+                    {node1 === 0 && <ErrorIcon />}
                 </Grid>
                 <Grid item>
                     <Typography className={classes.typography}>
                         Pump 1
                     </Typography>
-                    {pump1 == 1 && <CheckIcon />}
-                    {pump1 == 0 && <ErrorIcon />}
-                </Grid>
-                <Grid item>
-                    <Typography className={classes.typography}>
-                        Node 1 Leak
-                    </Typography>
-                    {node1Leak == 1 && <CheckIcon />}
-                    {node1Leak == 0 && <ErrorIcon />}
+                    {pump1 === 1 && <CheckIcon />}
+                    {pump1 === 0 && <ErrorIcon />}
                 </Grid>
                 <Grid item>
                     <Typography className={classes.typography}>
                         Valve 1
                     </Typography>
-                    {valve1 == 1 && <CheckIcon />}
-                    {valve1 == 0 && <ErrorIcon />}
+                    {valve1 === 1 && <CheckIcon />}
+                    {valve1 === 0 && <ErrorIcon />}
+                </Grid>
+                <Grid item>
+                    <Typography className={classes.typography}>
+                        Node 1 Leak
+                    </Typography>
+                    {node1Leak === 1 && <CheckIcon />}
+                    {node1Leak === 0 && <ErrorIcon />}
                 </Grid>
                 <Grid item>
                     <Typography className={classes.typography}>
                         Node 2 Comms
                     </Typography>
-                    {node2 == 1 && <CheckIcon />}
-                    {node2 == 0 && <ErrorIcon />}
+                    {node2 === 1 && <CheckIcon />}
+                    {node2 === 0 && <ErrorIcon />}
                 </Grid>
                 <Grid item>
                     <Typography className={classes.typography}>
                         Pump 2
                     </Typography>
-                    {pump2 == 1 && <CheckIcon />}
-                    {pump2 == 0 && <ErrorIcon />}
-                </Grid>
-                <Grid item>
-                    <Typography className={classes.typography}>
-                        Node 2 Leak
-                    </Typography>
-                    {node2Leak == 1 && <CheckIcon />}
-                    {node2Leak == 0 && <ErrorIcon />}
+                    {pump2 === 1 && <CheckIcon />}
+                    {pump2 === 0 && <ErrorIcon />}
                 </Grid>
                 <Grid item>
                     <Typography className={classes.typography}>
                         Valve 2
                     </Typography>
-                    {valve2 == 1 && <CheckIcon />}
-                    {valve2 == 0 && <ErrorIcon />}
+                    {valve2 === 1 && <CheckIcon />}
+                    {valve2 === 0 && <ErrorIcon />}
+                </Grid>
+                <Grid item>
+                    <Typography className={classes.typography}>
+                        Node 2 Leak
+                    </Typography>
+                    {node2Leak === 1 && <CheckIcon />}
+                    {node2Leak === 0 && <ErrorIcon />}
                 </Grid>
                 <Grid item>
                     <Typography className={classes.typography}>
                         pH Sensor
                     </Typography>
-                    {pH == 1 && <CheckIcon />}
-                    {pH == 0 && <ErrorIcon />}
+                    {pH === 1 && <CheckIcon />}
+                    {pH === 0 && <ErrorIcon />}
                 </Grid>
                 <Grid item>
                     <Typography className={classes.typography}>
                         EC Sensor
                     </Typography>
-                    {EC == 1 && <CheckIcon />}
-                    {EC == 0 && <ErrorIcon />}
+                    {EC === 1 && <CheckIcon />}
+                    {EC === 0 && <ErrorIcon />}
                 </Grid>
             </Grid>
         </div>
