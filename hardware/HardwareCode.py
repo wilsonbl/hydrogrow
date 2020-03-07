@@ -9,17 +9,90 @@ import multiprocessing
 from ctypes import c_char
 import smtplib
 import ssl
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 import pytz
 import random
-import math
 import subprocess
 
 
 #-----------------------------------SETUP-------------------------------------
 # Pin assignments
-TRIG = 4
-ECHO = 17
+PIN_MAP = {
+    3: 2,
+    5: 3,
+    7: 4,
+    8: 14,
+    10: 15,
+    11: 17,
+    12: 18,
+    13: 27,
+    15: 22,
+    16: 23,
+    18: 24,
+    19: 10,
+    21: 9,
+    22: 25,
+    23: 11,
+    24: 8,
+    26: 7,
+    29: 5,
+    31: 6,
+    32: 12,
+    33: 13,
+    35: 19,
+    36: 16,
+    37: 26,
+    38: 20,
+    40: 21
+}
+
+'''TRIG = 10
+ECHO = 9
+ULTRASONIC_SELECT_0 = 17'''
+TRIG = PIN_MAP[19]
+ECHO = PIN_MAP[21]
+ULTRASONIC_SELECT_0 = PIN_MAP[11]
+ULTRASONIC_SELECT_1 = PIN_MAP[13]
+ULTRASONIC_SELECT_2 = PIN_MAP[15]
+PUMP_SELECT_0 = PIN_MAP[36]
+PUMP_SELECT_1 = PIN_MAP[38]
+PUMP_SELECT_2 = PIN_MAP[40]
+PUMP_CIRCULATION = PIN_MAP[32]
+PUMP_SIGNAL = PIN_MAP[22]
+FLOW_0 = PIN_MAP[33]
+FLOW_1 = PIN_MAP[35]
+UART_SELECT = PIN_MAP[7]
+VALVE_1_HB1 = PIN_MAP[31]
+VALVE_1_HB2 = PIN_MAP[29]
+VALVE_2_HB1 = PIN_MAP[26]
+VALVE_2_HB2 = PIN_MAP[24]
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(TRIG, GPIO.OUT)
+GPIO.setup(ECHO, GPIO.IN)
+GPIO.setup(ULTRASONIC_SELECT_0, GPIO.OUT)
+GPIO.setup(ULTRASONIC_SELECT_1, GPIO.OUT)
+GPIO.setup(ULTRASONIC_SELECT_2, GPIO.OUT)
+GPIO.setup(PUMP_SELECT_0, GPIO.OUT)
+GPIO.setup(PUMP_SELECT_1, GPIO.OUT)
+GPIO.setup(PUMP_SELECT_2, GPIO.OUT)
+GPIO.setup(PUMP_CIRCULATION, GPIO.OUT)
+GPIO.setup(PUMP_SIGNAL, GPIO.OUT)
+GPIO.setup(FLOW_0, GPIO.IN)
+GPIO.setup(FLOW_1, GPIO.IN)
+GPIO.setup(UART_SELECT, GPIO.OUT)
+GPIO.setup(VALVE_1_HB1, GPIO.OUT)
+GPIO.setup(VALVE_1_HB2, GPIO.OUT)
+GPIO.setup(VALVE_2_HB1, GPIO.OUT)
+GPIO.setup(VALVE_2_HB2, GPIO.OUT)
+
+GPIO.output(PUMP_SELECT_0, GPIO.HIGH)
+GPIO.output(PUMP_SELECT_1, GPIO.HIGH)
+GPIO.output(PUMP_SELECT_2, GPIO.HIGH)
+GPIO.output(PUMP_SIGNAL, GPIO.HIGH)
+
+GPIO.output(VALVE_2_HB1, GPIO.HIGH)
+GPIO.output(VALVE_2_HB2, GPIO.LOW)
 
 # Update intervals (seconds)
 DB_UPDATE_INTERVAL = 10
@@ -57,12 +130,7 @@ pH_status = multiprocessing.Value('i', 0)
 EC_status = multiprocessing.Value('i', 0)
 fill_time_limit = multiprocessing.Value('i', 10)
 
-# Pin initialization
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(TRIG, GPIO.OUT)
-GPIO.setup(ECHO, GPIO.IN)
-
-# LCD initialization
+#LCD initialization
 lcd_columns = 16
 lcd_rows = 2
 i2c = busio.I2C(board.SCL, board.SDA)
@@ -128,10 +196,12 @@ def local_buttons(i2c, lcd, state):
 
 #-----------------------------------SENSORS-----------------------------------
 def read_base_water():
-    while True:
+    '''while True:
         base_water.value = random.randint(0, 99)
-        time.sleep(1)
-    '''pulseStart = 0
+        time.sleep(1)'''
+    pulseStart = 0
+    
+    GPIO.output(ULTRASONIC_SELECT_0, GPIO.HIGH)
 
     while True:
         GPIO.output(TRIG, GPIO.LOW)                     #Set TRIG as LOW
@@ -159,7 +229,7 @@ def read_base_water():
             with lock:
                 base_water.value = 0
 
-        time.sleep(BASE_WATER_UPDATE_INTERVAL)'''
+        time.sleep(BASE_WATER_UPDATE_INTERVAL)
 
 
 def read_pH():
@@ -180,6 +250,7 @@ def fill_tray():
     while(time.time() - start_time < fill_time_limit.value): #OR UPPER SENSOR TRIGGERED
         print("FILLING TRAY")
         time.sleep(1)
+
 
 def node1_water_cycle():
     while True:
@@ -297,6 +368,7 @@ def read_database():
         
         time.sleep(DB_READ_INTERVAL)
 
+
 def read_config():
     conn = sqlite3.connect('../backend/database/HydroDatabase.db')
     curs = conn.cursor()
@@ -349,17 +421,20 @@ def test_nodes():
     time.sleep(5)
     return False
 
+
 def test_valves():
     # Send x valve open commands. If error, throw node valve fail error
     print("TESTING VALVES")
     time.sleep(5)
     return False
 
+
 def test_pumps():
     # Turn main pump on and check output flow sensor. If flowrate = 0, throw pump error. If flowrate <= 0.5*(avg_flowrate), throw clog/leak error
     print("TESTING PUMPS")
     time.sleep(5)
     return False
+
 
 def test_trays():
     # Meant to be run after test_pumps (or whenever you're expecting water to be in a node).
@@ -368,17 +443,20 @@ def test_trays():
     time.sleep(5)
     return False
 
+
 def test_pH():
     # Send x messages requesting pH info. If error, throw pH error
     print("TESTING pH")
     time.sleep(5)
     return False
 
+
 def test_EC():
     # Send x messages requesting EC info. If error, throw EC error.
     print("TESTING EC")
     time.sleep(5)
     return False
+
 
 def startup_diagnostics():
     lcd.clear()
@@ -448,5 +526,6 @@ def main():
 
     except:
         print("Unable to start processes")
+
 
 main()
