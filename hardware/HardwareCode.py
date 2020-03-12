@@ -16,6 +16,8 @@ import subprocess
 from UartComm import uart_init, uart_comm
 from bitstring import BitArray
 
+
+
 #-----------------------------------SETUP-------------------------------------
 # Pin assignments
 PIN_MAP = {
@@ -154,6 +156,7 @@ password = "readytogrow"
 context = ssl.create_default_context()
 
 
+
 #--------------------------------LCD--------------------------------
 def local_display(i2c, lcd, state):
     state.value = 0
@@ -194,6 +197,7 @@ def local_buttons(i2c, lcd, state):
                     print("ERROR")
 
         time.sleep(0.2)
+
 
 
 #-----------------------------------SENSORS-----------------------------------
@@ -264,6 +268,7 @@ def trays_filled(node, read_value, level):
             return True
     
     return False
+
 
 
 #-----------------------------------WATERING----------------------------------
@@ -457,6 +462,7 @@ def node2_water_cycle():
         time.sleep(1)
 
 
+
 #-----------------------------------DATABASE----------------------------------
 def update_database():
     conn = sqlite3.connect('../backend/database/HydroDatabase.db')
@@ -539,10 +545,6 @@ def read_config():
 
     conn.close()
     
-
-#--------------------------------COMMUNICATION--------------------------------
-    
-
 
 
 #---------------------------------CALIBRATION---------------------------------
@@ -648,15 +650,6 @@ def startup_diagnostics():
         fill_tray()
         print("MAIN PUMP VALVE CLOSE")
         print("MAIN PUMP OFF")
-
-
-#-----------------------------------CLEANUP-----------------------------------
-'''@atexit.register
-def cleanup():
-    lcd.clear()
-    #conn.close()
-    #GPIO.cleanup()
-    print("See ya later! :D")'''
 
 
 #-------------------------------------MAIN-------------------------------------
