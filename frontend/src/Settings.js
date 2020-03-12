@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React, {useEffect} from 'react';
 import Button from '@material-ui/core/Button';
 import TextField from '@material-ui/core/TextField';
@@ -18,6 +19,25 @@ Color theme
 Dark/Light
 
 */
+=======
+import React, {Component} from 'react';
+import CssBaseline from '@material-ui/core/CssBaseline';
+import DashLayout from './DashLayout'
+
+class Settings extends Component {
+  render(){
+    return(
+      <div>
+        <CssBaseline />
+        <DashLayout />
+        <hi>
+          Settings
+        </hi>
+      </div>
+    );
+  }
+}
+>>>>>>> f9310ba728a9059ed143e7a81ecfd6d4bbdb18e0
 
 export default function Settings(){
     const [emailAddress, setEmailAddress] = React.useState("");
