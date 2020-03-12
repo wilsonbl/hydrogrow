@@ -1,12 +1,16 @@
 import React, {Component} from 'react';
+import CssBaseline from '@material-ui/core/CssBaseline';
+import DashLayout from './DashLayout'
 
 class Settings extends Component {
   render(){
     return(
       <div>
-        <h1>
+        <CssBaseline />
+        <DashLayout />
+        <hi>
           Settings
-        </h1>
+        </hi>
       </div>
     );
   }

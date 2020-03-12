@@ -13,7 +13,8 @@ from datetime import datetime, timezone
 import pytz
 import random
 import subprocess
-
+from UartComm import uart_init, uart_comm
+from bitstring import BitArray
 
 #-----------------------------------SETUP-------------------------------------
 # Pin assignments
@@ -46,9 +47,6 @@ PIN_MAP = {
     40: 21
 }
 
-'''TRIG = 10
-ECHO = 9
-ULTRASONIC_SELECT_0 = 17'''
 TRIG = PIN_MAP[19]
 ECHO = PIN_MAP[21]
 ULTRASONIC_SELECT_0 = PIN_MAP[11]
@@ -90,9 +88,11 @@ GPIO.output(PUMP_SELECT_0, GPIO.HIGH)
 GPIO.output(PUMP_SELECT_1, GPIO.HIGH)
 GPIO.output(PUMP_SELECT_2, GPIO.HIGH)
 GPIO.output(PUMP_SIGNAL, GPIO.HIGH)
-
 GPIO.output(VALVE_2_HB1, GPIO.HIGH)
 GPIO.output(VALVE_2_HB2, GPIO.LOW)
+
+#UART initialization
+ser = uart_init(UART_SELECT)
 
 # Update intervals (seconds)
 DB_UPDATE_INTERVAL = 10
@@ -129,19 +129,21 @@ leak2_status = multiprocessing.Value('i', 0)
 pH_status = multiprocessing.Value('i', 0)
 EC_status = multiprocessing.Value('i', 0)
 fill_time_limit = multiprocessing.Value('i', 10)
+node1_num_trays = multiprocessing.Value('i', 0)
+node2_num_trays = multiprocessing.Value('i', 0)
 
 #LCD initialization
-lcd_columns = 16
-lcd_rows = 2
-i2c = busio.I2C(board.SCL, board.SDA)
-lcd = character_lcd.Character_LCD_RGB_I2C(i2c, lcd_columns, lcd_rows)
-lcd.create_char(0, [0,0,1,1,2,1,7,8])       # OK 1
-lcd.create_char(1, [0,24,4,18,9,5,21,9])    # OK 2
-lcd.create_char(2, [0,23,8,20,19,8,6,1])    # OK 3
-lcd.create_char(3, [0,1,17,17,1,2,4,24])    # OK 4
-lcd.create_char(4, [0,4,14,31,31,31,14,0])  # Water Drop
-lcd.create_char(5, [0,0,27,14,4,14,27,0])   # X
-lcd.create_char(6, [0,0,1,3,22,28,8,0])     # Check
+# lcd_columns = 16
+# lcd_rows = 2
+# i2c = busio.I2C(board.SCL, board.SDA)
+# lcd = character_lcd.Character_LCD_RGB_I2C(i2c, lcd_columns, lcd_rows)
+# lcd.create_char(0, [0,0,1,1,2,1,7,8])       # OK 1
+# lcd.create_char(1, [0,24,4,18,9,5,21,9])    # OK 2
+# lcd.create_char(2, [0,23,8,20,19,8,6,1])    # OK 3
+# lcd.create_char(3, [0,1,17,17,1,2,4,24])    # OK 4
+# lcd.create_char(4, [0,4,14,31,31,31,14,0])  # Water Drop
+# lcd.create_char(5, [0,0,27,14,4,14,27,0])   # X
+# lcd.create_char(6, [0,0,1,3,22,28,8,0])     # Check
 
 # Email initialization
 port = 465
@@ -243,13 +245,172 @@ def read_EC():
         ec.value = random.randint(0, 10)
         time.sleep(1)
     
+    
+def trays_filled(node, read_value, level):
+    if node == 0:
+        num_trays = node1_num_trays.value
+    elif node == 1:
+        num_trays = node2_num_trays.value
+    
+    if level == 'top':
+        start = 1
+        end = num_trays * 2
+    elif level == 'bottom':
+        start = 0
+        end = (num_trays * 2) - 1
+    
+    for i in range(start, end, 2):
+        if read_value[i] == 1:
+            return True
+    
+    return False
+
 
 #-----------------------------------WATERING----------------------------------
-def fill_tray():
+def toggle_pump(pump, enable):
+    if pump == 0:
+        #Res to tray
+        GPIO.output(PUMP_SELECT_0, GPIO.LOW)
+        GPIO.output(PUMP_SELECT_1, GPIO.LOW)
+        GPIO.output(PUMP_SELECT_2, GPIO.LOW)
+    elif pump == 1:
+        #Tray to res
+        GPIO.output(PUMP_SELECT_0, GPIO.HIGH)
+        GPIO.output(PUMP_SELECT_1, GPIO.LOW)
+        GPIO.output(PUMP_SELECT_2, GPIO.LOW)
+    elif pump == 2:
+        #Nutrient 0
+        GPIO.output(PUMP_SELECT_0, GPIO.LOW)
+        GPIO.output(PUMP_SELECT_1, GPIO.HIGH)
+        GPIO.output(PUMP_SELECT_2, GPIO.LOW)
+    elif pump == 3:
+        #Nutrient 1
+        GPIO.output(PUMP_SELECT_0, GPIO.HIGH)
+        GPIO.output(PUMP_SELECT_1, GPIO.HIGH)
+        GPIO.output(PUMP_SELECT_2, GPIO.LOW)
+    elif pump == 4:
+        #Nutrient 2
+        GPIO.output(PUMP_SELECT_0, GPIO.LOW)
+        GPIO.output(PUMP_SELECT_1, GPIO.LOW)
+        GPIO.output(PUMP_SELECT_2, GPIO.HIGH)
+    elif pump == 5:
+        #Nutrient 3
+        GPIO.output(PUMP_SELECT_0, GPIO.HIGH)
+        GPIO.output(PUMP_SELECT_1, GPIO.LOW)
+        GPIO.output(PUMP_SELECT_2, GPIO.HIGH)
+    elif pump == 6:
+        #Nutrient 4
+        GPIO.output(PUMP_SELECT_0, GPIO.LOW)
+        GPIO.output(PUMP_SELECT_1, GPIO.HIGH)
+        GPIO.output(PUMP_SELECT_2, GPIO.HIGH)
+
+    if enable:
+        GPIO.output(PUMP_SIGNAL, GPIO.HIGH)
+    else:
+        GPIO.output(PUMP_SIGNAL, GPIO.LOW)
+        
+
+def toggle_circulation_pump(enable):
+    if enable:
+        GPIO.output(PUMP_CIRCULATION, GPIO.HIGH)
+    else:
+        GPIO.output(PUMP_CIRCULATION, GPIO.LOW)
+    
+    
+def toggle_valve(associated_pump, direction):
+    if associated_pump == 'res_to_tray':
+        valve_hb1 = VALVE_1_HB1
+        valve_hb2 = VALVE_1_HB2
+    elif associated_pump == 'tray_to_res':
+        valve_hb1 = VALVE_2_HB1
+        valve_hb2 = VALVE_2_HB2
+    
+    if direction == 'open':
+        GPIO.output(valve_hb1, GPIO.LOW)
+        GPIO.output(valve_hb2, GPIO.HIGH)
+    elif direction == 'close':
+        GPIO.output(valve_hb1, GPIO.HIGH)
+        GPIO.output(valve_hb2, GPIO.LOW)
+    elif direction == 'brake':
+        GPIO.output(valve_hb1, GPIO.LOW)
+        GPIO.output(valve_hb2, GPIO.LOW)
+        
+
+def toggle_node_valve(node, ser, direction):
+    valve_success = str(uart_comm(direction, node, ser, UART_SELECT))
+    if valve_success == 'f':
+        if node == 0:
+            valve1_status.value = 1
+        elif node == 1:
+            valve2_status.value = 1
+    return
+    
+        
+def fill_tray(node):
     start_time = time.time()
-    while(time.time() - start_time < fill_time_limit.value): #OR UPPER SENSOR TRIGGERED
-        print("FILLING TRAY")
-        time.sleep(1)
+    
+    read_value = BitArray(uart_comm('w', node, ser, UART_SELECT)).bin
+    if trays_filled(node, read_value, 'top'):
+        return
+    
+    toggle_valve('res_to_tray', 'open')
+    time.sleep(5)
+    toggle_valve('res_to_tray', 'brake')
+    
+    toggle_node_valve('o', node, ser)
+    
+    toggle_pump(0, True)
+    time.sleep(5) #ADJUST ME WHEN SYSTEM IS BUILT
+    
+    while(time.time() - start_time < fill_time_limit.value):
+        read_value = BitArray(uart_comm('w', node, ser, UART_SELECT)).bin
+        if not trays_filled(node, read_value, 'bottom'):
+            # ALSO CHECK FLOW SENSOR BEFORE THROWING LEAK ERROR
+            if node == 0:
+                leak1_status.value = 1
+            elif node == 1:
+                leak2_status.value = 1
+                
+            toggle_pump(0, False)
+            return
+        
+        read_value = BitArray(uart_comm('w', node, ser, UART_SELECT)).bin
+        if trays_filled(node, read_value, 'top'):
+            toggle_pump(0, False)
+        
+            toggle_valve('res_to_tray', 'close')
+            time.sleep(5)
+            toggle_valve('res_to_tray', 'brake')
+            
+            toggle_node_valve('c', node, ser)
+            
+            time.sleep(5) #ADJUST ME WHEN SYSTEM IS BUILT
+            
+            toggle_valve('tray_to_res', 'open')
+            time.sleep(5)
+            toggle_valve('tray_to_res', 'brake')
+            
+            toggle_node_valve('o', node, ser)
+            
+            toggle_pump(1, True)
+            
+            read_value = BitArray(uart_comm('w', node, ser, UART_SELECT)).bin
+            while trays_filled(node, read_value, 'bottom'):
+                read_value = BitArray(uart_comm('w', node, ser, UART_SELECT)).bin
+                time.sleep(0.1) #ADJUST ME WHEN SYSTEM IS BUILT
+                
+            toggle_pump(1, False)
+            
+            toggle_valve('tray_to_res', 'close')
+            time.sleep(5)
+            toggle_valve('tray_to_res', 'brake')
+            
+            toggle_node_valve('c', node, ser)
+            
+            return
+        
+        
+    return
 
 
 def node1_water_cycle():
@@ -377,6 +538,11 @@ def read_config():
     fill_time_limit.value = int(curs.fetchall()[0][0])
 
     conn.close()
+    
+
+#--------------------------------COMMUNICATION--------------------------------
+    
+
 
 
 #---------------------------------CALIBRATION---------------------------------
@@ -495,17 +661,21 @@ def cleanup():
 
 #-------------------------------------MAIN-------------------------------------
 def main():
-    setup_wifi()
-    startup_diagnostics()
+#     setup_wifi()
+#     startup_diagnostics()
 
     # Display startup message
-    lcd.message = '\x00\x01  READY TO  \x00\x01\n\x02\x03    GROW    \x02\x03'
-    time.sleep(2)
-    lcd.clear()
+#     lcd.message = '\x00\x01  READY TO  \x00\x01\n\x02\x03    GROW    \x02\x03'
+#     time.sleep(2)
+#     lcd.clear()
+
+    #Test UART
+    read_value = uart_comm('w', 0, ser, UART_SELECT)
+    print("UART READ VALUE: ", BitArray(read_value).bin[0])
     
     try:
-        display_process = multiprocessing.Process(target=local_display, args=(i2c, lcd, state))
-        button_process = multiprocessing.Process(target=local_buttons, args=(i2c, lcd, state))
+#         display_process = multiprocessing.Process(target=local_display, args=(i2c, lcd, state))
+#         button_process = multiprocessing.Process(target=local_buttons, args=(i2c, lcd, state))
         base_water_process = multiprocessing.Process(target=read_base_water)
         pH_process = multiprocessing.Process(target=read_pH)
         EC_process = multiprocessing.Process(target=read_EC)
@@ -514,8 +684,8 @@ def main():
         node1_water_cycle_process = multiprocessing.Process(target=node1_water_cycle)
         node2_water_cycle_process = multiprocessing.Process(target=node2_water_cycle)
         
-        button_process.start()
-        display_process.start()
+#         button_process.start()
+#         display_process.start()
         base_water_process.start()
         pH_process.start()
         EC_process.start()
