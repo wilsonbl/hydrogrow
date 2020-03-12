@@ -15,7 +15,7 @@ import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
 import SettingsIcon from '@material-ui/icons/Settings';
 import CardGrid from './CardGrid'
-import { Link } from 'react-router-dom'
+import Settings from './Settings'
 
 const drawerWidth = 240;
 
@@ -104,6 +104,10 @@ export default function DashLayout() {
     const handleDrawerClose = () => {
         setOpen(false);
       };
+    const [screen, setScreen] = React.useState(0);
+    const handleScreenChange = (event, screen) => {
+        setScreen(screen);
+    };
   
     return (
         <div className={classes.root}>
@@ -141,14 +145,14 @@ export default function DashLayout() {
                 <Divider />
                 <List>
                     <div>
-                        <ListItem button>
+                        <ListItem button onClick={event => handleScreenChange(event, 0)}>
                             <ListItemIcon>
                                 <HomeIcon />
                             </ListItemIcon>
                             <ListItemText primary="Home"/>
                         </ListItem>
-                        <ListItem>
-                            <ListItemIcon component={Link} to="/settings" >
+                        <ListItem button onClick={event => handleScreenChange(event, 1)}>
+                            <ListItemIcon  >
                                 <SettingsIcon />
                             </ListItemIcon>
                             <ListItemText primary="Settings"/>
@@ -158,7 +162,8 @@ export default function DashLayout() {
             </Drawer>
             <main className={classes.content}>
                 <div className={classes.appBarSpacer} />
-                <CardGrid />
+                {screen === 0 && <CardGrid />}
+                {screen === 1 && <Settings />}
             </main>
             
         </div>

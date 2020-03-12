@@ -14,6 +14,7 @@ var node2_water_freqRouter = require('./routes/node2_water_freq');
 var subsystem_statusRouter = require('./routes/subsystem_status');
 var desired_pHRouter = require('./routes/desired_pH');
 var desired_ECRouter = require('./routes/desired_EC');
+var configRouter = require('./routes/config');
 
 var app = express();
 
@@ -37,6 +38,7 @@ app.use('/node2_water_freq', node2_water_freqRouter)
 app.use('/subsystem_status', subsystem_statusRouter)
 app.use('/desired_pH', desired_pHRouter)
 app.use('/desired_EC', desired_ECRouter)
+app.use('/config', configRouter)
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
