@@ -66,6 +66,8 @@ VALVE_1_HB1 = PIN_MAP[31]
 VALVE_1_HB2 = PIN_MAP[29]
 VALVE_2_HB1 = PIN_MAP[26]
 VALVE_2_HB2 = PIN_MAP[24]
+FLOW_0 = PIN_MAP[33]
+FLOW_1 = PIN_MAP[35]
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(TRIG, GPIO.OUT)
@@ -100,6 +102,7 @@ ser = uart_init(UART_SELECT)
 DB_UPDATE_INTERVAL = 10
 DB_READ_INTERVAL = 10
 BASE_WATER_UPDATE_INTERVAL = 10
+FILL_TIME_LIMIT = 20
 
 # Share memory between processes
 lock = multiprocessing.Lock()
@@ -130,22 +133,21 @@ valve2_status = multiprocessing.Value('i', 0)
 leak2_status = multiprocessing.Value('i', 0)
 pH_status = multiprocessing.Value('i', 0)
 EC_status = multiprocessing.Value('i', 0)
-fill_time_limit = multiprocessing.Value('i', 10)
 node1_num_trays = multiprocessing.Value('i', 0)
 node2_num_trays = multiprocessing.Value('i', 0)
 
 #LCD initialization
-# lcd_columns = 16
-# lcd_rows = 2
-# i2c = busio.I2C(board.SCL, board.SDA)
-# lcd = character_lcd.Character_LCD_RGB_I2C(i2c, lcd_columns, lcd_rows)
-# lcd.create_char(0, [0,0,1,1,2,1,7,8])       # OK 1
-# lcd.create_char(1, [0,24,4,18,9,5,21,9])    # OK 2
-# lcd.create_char(2, [0,23,8,20,19,8,6,1])    # OK 3
-# lcd.create_char(3, [0,1,17,17,1,2,4,24])    # OK 4
-# lcd.create_char(4, [0,4,14,31,31,31,14,0])  # Water Drop
-# lcd.create_char(5, [0,0,27,14,4,14,27,0])   # X
-# lcd.create_char(6, [0,0,1,3,22,28,8,0])     # Check
+lcd_columns = 16
+lcd_rows = 2
+i2c = busio.I2C(board.SCL, board.SDA)
+lcd = character_lcd.Character_LCD_RGB_I2C(i2c, lcd_columns, lcd_rows)
+lcd.create_char(0, [0,0,1,1,2,1,7,8])       # OK 1
+lcd.create_char(1, [0,24,4,18,9,5,21,9])    # OK 2
+lcd.create_char(2, [0,23,8,20,19,8,6,1])    # OK 3
+lcd.create_char(3, [0,1,17,17,1,2,4,24])    # OK 4
+lcd.create_char(4, [0,4,14,31,31,31,14,0])  # Water Drop
+lcd.create_char(5, [0,0,27,14,4,14,27,0])   # X
+lcd.create_char(6, [0,0,1,3,22,28,8,0])     # Check
 
 # Email initialization
 port = 465
@@ -154,6 +156,15 @@ sender_email = "myhydrogrow@gmail.com"
 receiver_email = "1234blair@gmail.com"
 password = "readytogrow"
 context = ssl.create_default_context()
+
+def send_email(error_message):
+       with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
+            print("SENDING EMAIL")
+            try:
+                server.login(sender_email, password)
+                server.sendmail(sender_email, receiver_email, error_message)
+            except smtplib.SMTPException as error:
+                print("ERROR:", error) 
 
 
 
@@ -187,14 +198,6 @@ def local_buttons(i2c, lcd, state):
             else:
                 with lock:
                     state.value -= 1
-        elif lcd.left_button:
-            with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
-                print("SENDING EMAIL")
-                try:
-                    server.login(sender_email, password)
-                    server.sendmail(sender_email, receiver_email, "TEST MESSAGE")
-                except:
-                    print("ERROR")
 
         time.sleep(0.2)
 
@@ -215,7 +218,7 @@ def read_base_water():
         time.sleep(0.000001)                            #Delay of 0.00001 seconds
         GPIO.output(TRIG, GPIO.LOW)                     #Set TRIG as LOW
 
-        while GPIO.input(ECHO)==0:               	    #Check if Echo is LOW
+        while GPIO.input(ECHO)==0:                      #Check if Echo is LOW
             pulseStart = time.time()                    #Time of the last  LOW pulse
         
         while GPIO.input(ECHO)==1:                      #Check whether Echo is HIGH
@@ -240,17 +243,42 @@ def read_base_water():
 
 def read_pH():
     while True:
-        pH.value = random.randint(0, 14)
+        pH.value = random.randint(5, 7)
         time.sleep(1)
 
 
 def read_EC():
     while True:
-        ec.value = random.randint(0, 10)
+        ec.value = random.randint(1, 2)
         time.sleep(1)
+        
+        
+def read_flow():
+    state = 0
+    timer = 0
+    
+    while timer < 5:
+        flow_input = GPIO.input(FLOW_0)
+        if state % 2 == 0 and flow_input == 0:
+            state += 1
+        elif state % 2 == 1 and flow_input == 1:
+            state += 1
+            
+        if state == 4:
+            print("WATER FLOWING")
+            return True
+        
+        time.sleep(0.01)
+        timer += 0.01
+        
+    print("WATER NOT FLOWING")
+    return False
     
     
 def trays_filled(node, read_value, level):
+    # Reverse read_value (indexing starts on opposite end)
+    read_value = read_value[::-1]
+    
     if node == 0:
         num_trays = node1_num_trays.value
     elif node == 1:
@@ -263,10 +291,15 @@ def trays_filled(node, read_value, level):
         start = 0
         end = (num_trays * 2) - 1
     
+    print("Start:", start)
+    print("End:", end)
+    print(read_value)
     for i in range(start, end, 2):
-        if read_value[i] == 1:
+        if int(read_value[i]) == 1:
+            print("NODE " + str(node) + " TRAY FILLED")
             return True
     
+    print("NODE " + str(node) + " TRAY NOT FILLED")
     return False
 
 
@@ -274,36 +307,43 @@ def trays_filled(node, read_value, level):
 #-----------------------------------WATERING----------------------------------
 def toggle_pump(pump, enable):
     if pump == 0:
+        print("TOGGLING RES_TO_TRAY PUMP: " + str(enable))
         #Res to tray
         GPIO.output(PUMP_SELECT_0, GPIO.LOW)
         GPIO.output(PUMP_SELECT_1, GPIO.LOW)
         GPIO.output(PUMP_SELECT_2, GPIO.LOW)
     elif pump == 1:
+        print("TOGGLING TRAY_TO_RES PUMP: " + str(enable))
         #Tray to res
         GPIO.output(PUMP_SELECT_0, GPIO.HIGH)
         GPIO.output(PUMP_SELECT_1, GPIO.LOW)
         GPIO.output(PUMP_SELECT_2, GPIO.LOW)
     elif pump == 2:
+        print("TOGGLING NUTRIENT 0 PUMP: " + str(enable))
         #Nutrient 0
         GPIO.output(PUMP_SELECT_0, GPIO.LOW)
         GPIO.output(PUMP_SELECT_1, GPIO.HIGH)
         GPIO.output(PUMP_SELECT_2, GPIO.LOW)
     elif pump == 3:
+        print("TOGGLING NUTRIENT 1 PUMP: " + str(enable))
         #Nutrient 1
         GPIO.output(PUMP_SELECT_0, GPIO.HIGH)
         GPIO.output(PUMP_SELECT_1, GPIO.HIGH)
         GPIO.output(PUMP_SELECT_2, GPIO.LOW)
     elif pump == 4:
+        print("TOGGLING NUTRIENT 2 PUMP: " + str(enable))
         #Nutrient 2
         GPIO.output(PUMP_SELECT_0, GPIO.LOW)
         GPIO.output(PUMP_SELECT_1, GPIO.LOW)
         GPIO.output(PUMP_SELECT_2, GPIO.HIGH)
     elif pump == 5:
+        print("TOGGLING NUTRIENT 3 PUMP: " + str(enable))
         #Nutrient 3
         GPIO.output(PUMP_SELECT_0, GPIO.HIGH)
         GPIO.output(PUMP_SELECT_1, GPIO.LOW)
         GPIO.output(PUMP_SELECT_2, GPIO.HIGH)
     elif pump == 6:
+        print("TOGGLING NUTRIENT 4 PUMP: " + str(enable))
         #Nutrient 4
         GPIO.output(PUMP_SELECT_0, GPIO.LOW)
         GPIO.output(PUMP_SELECT_1, GPIO.HIGH)
@@ -316,6 +356,7 @@ def toggle_pump(pump, enable):
         
 
 def toggle_circulation_pump(enable):
+    print("TOGGLING CIRCULATION PUMP: " + enable)
     if enable:
         GPIO.output(PUMP_CIRCULATION, GPIO.HIGH)
     else:
@@ -323,6 +364,8 @@ def toggle_circulation_pump(enable):
     
     
 def toggle_valve(associated_pump, direction):
+    print("TOGGLING " + associated_pump + " VALVE: " + direction)
+
     if associated_pump == 'res_to_tray':
         valve_hb1 = VALVE_1_HB1
         valve_hb2 = VALVE_1_HB2
@@ -341,80 +384,117 @@ def toggle_valve(associated_pump, direction):
         GPIO.output(valve_hb2, GPIO.LOW)
         
 
-def toggle_node_valve(node, ser, direction):
-    valve_success = str(uart_comm(direction, node, ser, UART_SELECT))
+def toggle_node_valve(direction, node):
+    print("TOGGLING NODE " + str(node) + " VALVE: " + str(direction))
+
+    valve_success = str(uart_comm(direction, node, ser, UART_SELECT).decode())
+    print(valve_success)
     if valve_success == 'f':
         if node == 0:
-            valve1_status.value = 1
+            valve1_status.value = 0
         elif node == 1:
-            valve2_status.value = 1
-    return
+            valve2_status.value = 0
+            
+        send_email("Subject: Hydrogrow Valve Error\n\nAn issue occurred with the valve on node " + str(node) + " at " + str(datetime.now().strftime('%H:%M') + " on " + str(datetime.now().strftime("%m/%d/%Y") + ".\n\nPlease examine the Hydrogrow system.")))
+    return valve_success
+
+
+def drain_tray(node):
+    print("STARTING NODE " + str(node) + " DRAIN")
+    toggle_pump(0, False)
     
-        
-def fill_tray(node):
-    start_time = time.time()
+    toggle_valve('res_to_tray', 'close')
+    time.sleep(5)
+    toggle_valve('res_to_tray', 'brake')
+    
+    toggle_node_valve('c', node)
+    
+    time.sleep(5) #ADJUST ME WHEN SYSTEM IS BUILT
+    
+    # Turn on drain pump and open drain valves until bottom level sensors aren't triggered.
+    toggle_valve('tray_to_res', 'open')
+    time.sleep(5)
+    toggle_valve('tray_to_res', 'brake')
+    
+    toggle_node_valve('o', node)
+    
+    toggle_pump(1, True)
     
     read_value = BitArray(uart_comm('w', node, ser, UART_SELECT)).bin
-    if trays_filled(node, read_value, 'top'):
-        return
+    while trays_filled(node, read_value, 'bottom'):
+        read_value = BitArray(uart_comm('w', node, ser, UART_SELECT)).bin
+        time.sleep(0.1) #ADJUST ME WHEN SYSTEM IS BUILT
+        
+    # Turn off drain pump, close drain valves, and return
+    toggle_pump(1, False)
     
+    toggle_valve('tray_to_res', 'close')
+    time.sleep(5)
+    toggle_valve('tray_to_res', 'brake')
+    
+    toggle_node_valve('c', node)
+    
+    return
+            
+    
+def fill_tray(node):
+    print("STARTING NODE " + str(node) + " FILL")
+
+    # If trays are already full, return
+    read_value = BitArray(uart_comm('w', node, ser, UART_SELECT)).bin
+    print("Top:", read_value)
+    if trays_filled(node, read_value, 'top'):
+        print("TRAY FULL. STOPPING FILL.")
+        return
+
     toggle_valve('res_to_tray', 'open')
     time.sleep(5)
     toggle_valve('res_to_tray', 'brake')
     
-    toggle_node_valve('o', node, ser)
+    toggle_node_valve('o', node)
     
     toggle_pump(0, True)
-    time.sleep(5) #ADJUST ME WHEN SYSTEM IS BUILT
+    time.sleep(10) #ADJUST ME WHEN SYSTEM IS BUILT
     
-    while(time.time() - start_time < fill_time_limit.value):
+    # If no water is flowing, throw pump error and return
+    if not read_flow():
+        if node == 0:
+            pump1_status.value = 0
+        elif node == 1:
+            pump2_status.value = 0
+        toggle_pump(0, False)
+        
+        send_email("Subject: Hydrogrow Pump Error\n\nAn issue occurred with the pump on node " + str(node) + " at " + str(datetime.now().strftime('%H:%M') + " on " + str(datetime.now().strftime("%m/%d/%Y") + ".\n\nPlease examine the Hydrogrow system.")))
+        print("NO WATER FLOWING. PUMP ERROR.")
+        return
+    
+    # Return if time limit reached
+    start_time = time.time()
+    while(time.time() - start_time < FILL_TIME_LIMIT):
+        # If bottom level sensors aren't triggered, throw leak error, turn off pump, and return
         read_value = BitArray(uart_comm('w', node, ser, UART_SELECT)).bin
+        print("Bottom:", read_value)
         if not trays_filled(node, read_value, 'bottom'):
-            # ALSO CHECK FLOW SENSOR BEFORE THROWING LEAK ERROR
             if node == 0:
-                leak1_status.value = 1
+                leak1_status.value = 0
             elif node == 1:
-                leak2_status.value = 1
+                leak2_status.value = 0
                 
+            send_email("Subject: Hydrogrow Leak Issue\n\nA leak issue occurred on node " + str(node) + " at " + str(datetime.now().strftime('%H:%M') + " on " + str(datetime.now().strftime("%m/%d/%Y") + ".\n\nPlease examine the Hydrogrow system.")))
+            print("BOTTOM LEVEL SENSORS NOT TRIGGERED WHEN WATER SHOULD BE FLOWING. LEAK ERROR.")
+
             toggle_pump(0, False)
             return
         
+        # If top level sensors are triggered, turn off fill pump and close fill valves.
         read_value = BitArray(uart_comm('w', node, ser, UART_SELECT)).bin
+        print("Top:", read_value)
         if trays_filled(node, read_value, 'top'):
-            toggle_pump(0, False)
-        
-            toggle_valve('res_to_tray', 'close')
-            time.sleep(5)
-            toggle_valve('res_to_tray', 'brake')
-            
-            toggle_node_valve('c', node, ser)
-            
-            time.sleep(5) #ADJUST ME WHEN SYSTEM IS BUILT
-            
-            toggle_valve('tray_to_res', 'open')
-            time.sleep(5)
-            toggle_valve('tray_to_res', 'brake')
-            
-            toggle_node_valve('o', node, ser)
-            
-            toggle_pump(1, True)
-            
-            read_value = BitArray(uart_comm('w', node, ser, UART_SELECT)).bin
-            while trays_filled(node, read_value, 'bottom'):
-                read_value = BitArray(uart_comm('w', node, ser, UART_SELECT)).bin
-                time.sleep(0.1) #ADJUST ME WHEN SYSTEM IS BUILT
-                
-            toggle_pump(1, False)
-            
-            toggle_valve('tray_to_res', 'close')
-            time.sleep(5)
-            toggle_valve('tray_to_res', 'brake')
-            
-            toggle_node_valve('c', node, ser)
-            
-            return
-        
-        
+            drain_tray(node)
+            return 
+    
+    print("FILL TIMEOUT REACHED.")
+    drain_tray(node)    
     return
 
 
@@ -432,8 +512,11 @@ def node1_water_cycle():
 
             # Start watering if current datetime is a) greater than start datetime and b) a multiple of the cycle time
             if diff_min >= 0 and diff_min % node1_cycle_min == 0:
-                #print("START NODE 1 WATER CYCLE")
-                node1_watering.value = 1
+                if node1_watering.value == 0:
+                    print("NODE 1 WATER CYCLE STARTING")
+                    #fill_tray()
+                    node1_watering.value = 1
+                
             else:
                 #print("DON'T START NODE 1 WATER CYCLE")
                 node1_watering.value = 0
@@ -454,7 +537,7 @@ def node2_water_cycle():
 
             # Start watering if current datetime is a) greater than start datetime and b) a multiple of the cycle time
             if diff_min >= 0 and diff_min % node2_cycle_min == 0:
-                #print("START NODE 2 WATER CYCLE")
+                print("NODE 2 WATER CYCLE STARTING")
                 node2_watering.value = 1
             else:
                 #print("DON'T START NODE 2 WATER CYCLE")
@@ -539,9 +622,12 @@ def read_database():
 def read_config():
     conn = sqlite3.connect('../backend/database/HydroDatabase.db')
     curs = conn.cursor()
-
-    curs.execute("SELECT fill_time_limit FROM CONFIG")
-    fill_time_limit.value = int(curs.fetchall()[0][0])
+    
+    curs.execute("SELECT node1_num_trays from CONFIG")
+    node1_num_trays.value = int(curs.fetchall()[0][0])
+    
+    curs.execute("SELECT node2_num_trays from CONFIG")
+    node2_num_trays.value = int(curs.fetchall()[0][0])
 
     conn.close()
     
@@ -583,24 +669,32 @@ def setup_wifi():
             time.sleep(0.2) 
 
 
-def test_nodes():
+def test_node(node):
     # Send x messages. If no response throw node error
-    print("TESTING NODES")
-    time.sleep(5)
-    return False
+    print("TESTING NODE", node)
+    node_hs = uart_comm('h', node, ser, UART_SELECT)
+    
+    if node_hs != 'h':
+        if node == 0:
+            node1_status.value = 0
+        elif node == 1:
+            node2_status.value = 0
+            
+        send_email("Subject: Hydrogrow Node Communication Issue\n\nAn issue occurred when attempting to communicate with node " + str(node) + " at " + str(datetime.now().strftime('%H:%M') + " on " + str(datetime.now().strftime("%m/%d/%Y") + ".\n\nPlease examine the Hydrogrow system.")))
 
-
-def test_valves():
-    # Send x valve open commands. If error, throw node valve fail error
-    print("TESTING VALVES")
-    time.sleep(5)
-    return False
+'''
+def test_valve(node):
+    # Send x valve close commands. If error, throw node valve fail error
+    print("TESTING VALVE", node)
+    toggle_node_valve('c', node)
 
 
 def test_pumps():
-    # Turn main pump on and check output flow sensor. If flowrate = 0, throw pump error. If flowrate <= 0.5*(avg_flowrate), throw clog/leak error
+    # Turn main pump on and check output flow sensor. If flowrate = 0, throw pump error.p If flowrate <= 0.5*(avg_flowrate), throw clog/leak error
     print("TESTING PUMPS")
-    time.sleep(5)
+    toggle_pump(0, True)
+    time.sleep(5) #ADJUST WHEN SYSTEM IS BUILT
+        
     return False
 
 
@@ -610,6 +704,7 @@ def test_trays():
     print("TESTING TRAYS")
     time.sleep(5)
     return False
+'''
 
 
 def test_pH():
@@ -625,7 +720,7 @@ def test_EC():
     time.sleep(5)
     return False
 
-
+'''
 def startup_diagnostics():
     lcd.clear()
     lcd.message = "SELECT > Diags\nOTHER > Continue"
@@ -639,8 +734,10 @@ def startup_diagnostics():
 
     if selection == 2:
         read_config()
-        test_nodes()
-        test_valves()
+        test_node(0)
+        test_node(1)
+        test_valve(0)
+        test_valve(1)
         print("MAIN PUMP VALVE OPEN")
         print("NODE VALVE OPEN")
         print("MAIN PUMP ON")
@@ -650,25 +747,59 @@ def startup_diagnostics():
         fill_tray()
         print("MAIN PUMP VALVE CLOSE")
         print("MAIN PUMP OFF")
+'''
+
+    
+def startup_config():
+    toggle_pump(0, False)
+    toggle_pump(1, False)
+    toggle_node_valve('c', 0)
+    toggle_valve('res_to_tray', 'close')
+    time.sleep(5)
+    toggle_valve('res_to_tray', 'brake')
+    toggle_valve('tray_to_res', 'close')
+    time.sleep(5)
+    toggle_valve('tray_to_res', 'brake')
 
 
 #-------------------------------------MAIN-------------------------------------
 def main():
-#     setup_wifi()
-#     startup_diagnostics()
+    read_config()
+    
+    #Test UART
+    read_value = BitArray(uart_comm('w', 0, ser, UART_SELECT)).bin
+    print("UART READ VALUE: ", read_value)
+    print(trays_filled(0, read_value, 'bottom'))
+    
+    #while True:
+    #    print(read_flow())
+    #    time.sleep(1)
+        
+    #setup_wifi()
+    #startup_diagnostics()
+    
+    startup_config()
 
     # Display startup message
-#     lcd.message = '\x00\x01  READY TO  \x00\x01\n\x02\x03    GROW    \x02\x03'
-#     time.sleep(2)
-#     lcd.clear()
+    lcd.message = '\x00\x01  READY TO  \x00\x01\n\x02\x03    GROW    \x02\x03'
+    time.sleep(2)
+    lcd.clear()
+    
+    '''
+    toggle_valve('res_to_tray', 'close')
+    time.sleep(5)
+    toggle_valve('res_to_tray', 'brake')
+    
+    toggle_node_valve('c', 0, ser)
+    fill_tray(0)
+    print(BitArray(uart_comm('w', 0, ser, UART_SELECT)).bin)
+    '''
 
-    #Test UART
-    read_value = uart_comm('w', 0, ser, UART_SELECT)
-    print("UART READ VALUE: ", BitArray(read_value).bin[0])
+    fill_tray(0)
     
     try:
-#         display_process = multiprocessing.Process(target=local_display, args=(i2c, lcd, state))
-#         button_process = multiprocessing.Process(target=local_buttons, args=(i2c, lcd, state))
+        display_process = multiprocessing.Process(target=local_display, args=(i2c, lcd, state))
+        button_process = multiprocessing.Process(target=local_buttons, args=(i2c, lcd, state))
         base_water_process = multiprocessing.Process(target=read_base_water)
         pH_process = multiprocessing.Process(target=read_pH)
         EC_process = multiprocessing.Process(target=read_EC)
@@ -677,8 +808,8 @@ def main():
         node1_water_cycle_process = multiprocessing.Process(target=node1_water_cycle)
         node2_water_cycle_process = multiprocessing.Process(target=node2_water_cycle)
         
-#         button_process.start()
-#         display_process.start()
+        button_process.start()
+        display_process.start()
         base_water_process.start()
         pH_process.start()
         EC_process.start()

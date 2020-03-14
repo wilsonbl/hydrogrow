@@ -2,8 +2,6 @@ import RPi.GPIO as GPIO
 import serial
 import time, sys
 
-#UART_SEL = 7
-#ser = None
 
 def uart_init(pin):
     SERIAL_PORT = "/dev/ttyS0"
@@ -27,7 +25,6 @@ def uart_send_rec(value, ser):
 
     return read_value
 
-    
 
 def uart_comm(value, node_num, ser, UART_SEL):
     if node_num == 0:
