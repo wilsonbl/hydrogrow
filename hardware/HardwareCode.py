@@ -68,6 +68,7 @@ VALVE_2_HB1 = PIN_MAP[26]
 VALVE_2_HB2 = PIN_MAP[24]
 FLOW_0 = PIN_MAP[33]
 FLOW_1 = PIN_MAP[35]
+POWER_DOWN = PIN_MAP[23]
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(TRIG, GPIO.OUT)
@@ -87,7 +88,11 @@ GPIO.setup(VALVE_1_HB1, GPIO.OUT)
 GPIO.setup(VALVE_1_HB2, GPIO.OUT)
 GPIO.setup(VALVE_2_HB1, GPIO.OUT)
 GPIO.setup(VALVE_2_HB2, GPIO.OUT)
+GPIO.setup(POWER_DOWN, GPIO.IN)
 
+GPIO.output(ULTRASONIC_SELECT_0, GPIO.LOW)
+GPIO.output(ULTRASONIC_SELECT_1, GPIO.LOW)
+GPIO.output(ULTRASONIC_SELECT_2, GPIO.LOW)
 GPIO.output(PUMP_SELECT_0, GPIO.HIGH)
 GPIO.output(PUMP_SELECT_1, GPIO.HIGH)
 GPIO.output(PUMP_SELECT_2, GPIO.HIGH)
@@ -152,7 +157,7 @@ lcd.create_char(6, [0,0,1,3,22,28,8,0])     # Check
 # Email initialization
 port = 465
 smtp_server = "smtp.gmail.com"
-sender_email = "myhydrogrow@gmail.com" 
+sender_email = "hydrogrowalerts@gmail.com" 
 receiver_email = "1234blair@gmail.com"
 password = "readytogrow"
 context = ssl.create_default_context()
@@ -173,7 +178,7 @@ def local_display(i2c, lcd, state):
     state.value = 0
     while True:
         if state.value == 0:
-            lcd.message = "BW EC pH       {}\n{:0>2d} {:0>2d} {:0>2d}       {}".format("\x04" if node1_watering.value else "\x05", int(base_water.value), int(ec.value), int(pH.value), "\x04" if node2_watering.value else "\x05")
+            lcd.message = "BW   EC   pH   {}\n{:0>2d}%  {:.1f}  {:.1f}  {}".format("\x04" if node1_watering.value else "\x05", int(base_water.value), float(ec.value), float(pH.value), "\x04" if node2_watering.value else "\x05")
         elif state.value == 1:
             lcd.message = "N1 N2 N3 N4 N5 {}\n{:0>2d} {:0>2d} {:0>2d} {:0>2d} {:0>2d} {}".format("\x04" if node1_watering.value else "\x05", int(nutrient_1.value), int(nutrient_2.value), int(nutrient_3.value), int(nutrient_4.value),  int(nutrient_5.value), "\x04" if node2_watering.value else "\x05")
         elif state.value == 2:
@@ -198,6 +203,8 @@ def local_buttons(i2c, lcd, state):
             else:
                 with lock:
                     state.value -= 1
+        elif lcd.right_button:
+            power_down()
 
         time.sleep(0.2)
 
@@ -209,8 +216,6 @@ def read_base_water():
         base_water.value = random.randint(0, 99)
         time.sleep(1)'''
     pulseStart = 0
-    
-    GPIO.output(ULTRASONIC_SELECT_0, GPIO.HIGH)
 
     while True:
         GPIO.output(TRIG, GPIO.LOW)                     #Set TRIG as LOW
@@ -232,7 +237,8 @@ def read_base_water():
         if distance < 400:
             #print ("Distance:",distance - 0.5,"cm")     #Distance with calibration
             with lock:
-                base_water.value = distance
+                base_water.value = int((((30 - distance) / 30) * 100) - 0.5)
+                #print("BASE WATER:", base_water.value)
         else:
             #print ("Out Of Range")                      #display out of range
             with lock:
@@ -242,16 +248,19 @@ def read_base_water():
 
 
 def read_pH():
+    ph_values = [6, 6.5, 6.5, 6.5, 6.4, 6.2, 6.3, 6.2, 6.2, 6.3, 6.3, 6.2, 6.4, 6.4]
     while True:
-        pH.value = random.randint(5, 7)
-        time.sleep(1)
+        for x in ph_values:
+            pH.value = x
+            time.sleep(10)
 
 
 def read_EC():
+    ec_values = [2, 2.2, 2.2, 2.1, 2.3, 2.3, 2.2, 2.1, 1.9, 2.1, 2.1]
     while True:
-        ec.value = random.randint(1, 2)
-        time.sleep(1)
-        
+        for x in ec_values:
+            ec.value = x
+            time.sleep(10)
         
 def read_flow():
     state = 0
@@ -445,6 +454,7 @@ def fill_tray(node):
     print("Top:", read_value)
     if trays_filled(node, read_value, 'top'):
         print("TRAY FULL. STOPPING FILL.")
+        drain_tray(node)
         return
 
     toggle_valve('res_to_tray', 'open')
@@ -454,7 +464,7 @@ def fill_tray(node):
     toggle_node_valve('o', node)
     
     toggle_pump(0, True)
-    time.sleep(10) #ADJUST ME WHEN SYSTEM IS BUILT
+    time.sleep(20) #ADJUST ME WHEN SYSTEM IS BUILT
     
     # If no water is flowing, throw pump error and return
     if not read_flow():
@@ -514,8 +524,9 @@ def node1_water_cycle():
             if diff_min >= 0 and diff_min % node1_cycle_min == 0:
                 if node1_watering.value == 0:
                     print("NODE 1 WATER CYCLE STARTING")
-                    #fill_tray()
                     node1_watering.value = 1
+                    fill_tray(0)
+                    node1_watering.value = 0
                 
             else:
                 #print("DON'T START NODE 1 WATER CYCLE")
@@ -537,8 +548,9 @@ def node2_water_cycle():
 
             # Start watering if current datetime is a) greater than start datetime and b) a multiple of the cycle time
             if diff_min >= 0 and diff_min % node2_cycle_min == 0:
-                print("NODE 2 WATER CYCLE STARTING")
-                node2_watering.value = 1
+                if node2_watering.value == 0:
+                    print("NODE 2 WATER CYCLE STARTING")
+                    node2_watering.value = 1
             else:
                 #print("DON'T START NODE 2 WATER CYCLE")
                 node2_watering.value = 0
@@ -553,8 +565,8 @@ def update_database():
 
     while True:
         t = int(round(time.time() * 1000))
-        print("INSERTING INTO DB: ", t, base_water.value - 0.5)
-        curs.execute("INSERT INTO BASE_WATER(time, base_water) VALUES(?, ?)", (t, base_water.value - 0.5))
+        print("INSERTING INTO DB: ", t, base_water.value)
+        curs.execute("INSERT INTO BASE_WATER(time, base_water) VALUES(?, ?)", (t, base_water.value))
 
         conn.commit()
         time.sleep(DB_UPDATE_INTERVAL)
@@ -672,7 +684,8 @@ def setup_wifi():
 def test_node(node):
     # Send x messages. If no response throw node error
     print("TESTING NODE", node)
-    node_hs = uart_comm('h', node, ser, UART_SELECT)
+    node_hs = str(uart_comm('h', node, ser, UART_SELECT).decode())
+    print(node_hs)
     
     if node_hs != 'h':
         if node == 0:
@@ -760,30 +773,39 @@ def startup_config():
     toggle_valve('tray_to_res', 'close')
     time.sleep(5)
     toggle_valve('tray_to_res', 'brake')
+    
 
 
 #-------------------------------------MAIN-------------------------------------
+def power_down():
+    #while True:
+        #if GPIO.input(POWER_DOWN):
+    print("STOPPING PROGRAM")
+    lcd.clear()
+    GPIO.cleanup()
+    subprocess.run(['shutdown', '0'], universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    exit()
+        
+    time.sleep(0.1)
+
+    
 def main():
     read_config()
+    #fill_tray(0)
+    #startup_config()
     
-    #Test UART
-    read_value = BitArray(uart_comm('w', 0, ser, UART_SELECT)).bin
-    print("UART READ VALUE: ", read_value)
-    print(trays_filled(0, read_value, 'bottom'))
-    
-    #while True:
-    #    print(read_flow())
-    #    time.sleep(1)
-        
     #setup_wifi()
     #startup_diagnostics()
     
-    startup_config()
 
     # Display startup message
     lcd.message = '\x00\x01  READY TO  \x00\x01\n\x02\x03    GROW    \x02\x03'
     time.sleep(2)
     lcd.clear()
+    
+    #test_node(0)
+    
+    
     
     '''
     toggle_valve('res_to_tray', 'close')
@@ -795,7 +817,6 @@ def main():
     print(BitArray(uart_comm('w', 0, ser, UART_SELECT)).bin)
     '''
 
-    fill_tray(0)
     
     try:
         display_process = multiprocessing.Process(target=local_display, args=(i2c, lcd, state))
@@ -820,6 +841,8 @@ def main():
 
     except:
         print("Unable to start processes")
+        
+    
 
 
 main()
