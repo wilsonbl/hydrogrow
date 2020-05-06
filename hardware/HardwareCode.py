@@ -49,6 +49,7 @@ PIN_MAP = {
     40: 21
 }
 
+# Pin numbers must be mapped to GPIO numbers due to GPIO.setmode(GPIO.BCM)
 TRIG = PIN_MAP[19]
 ECHO = PIN_MAP[21]
 ULTRASONIC_SELECT_0 = PIN_MAP[11]
@@ -157,7 +158,7 @@ lcd.create_char(6, [0,0,1,3,22,28,8,0])     # Check
 # Email initialization
 port = 465
 smtp_server = "smtp.gmail.com"
-sender_email = "hydrogrowalerts@gmail.com" 
+sender_email = "hydrogrowalerts@gmail.com"
 receiver_email = "1234blair@gmail.com"
 password = "readytogrow"
 context = ssl.create_default_context()
@@ -169,7 +170,7 @@ def send_email(error_message):
                 server.login(sender_email, password)
                 server.sendmail(sender_email, receiver_email, error_message)
             except smtplib.SMTPException as error:
-                print("ERROR:", error) 
+                print("ERROR:", error)
 
 
 
@@ -211,23 +212,24 @@ def local_buttons(i2c, lcd, state):
 
 
 #-----------------------------------SENSORS-----------------------------------
+
+# Read the ultrasonic sensor for determining the water left in the reservoir
 def read_base_water():
-    '''while True:
-        base_water.value = random.randint(0, 99)
-        time.sleep(1)'''
     pulseStart = 0
 
     while True:
+        # Pulse the trigger signal to begin reading
         GPIO.output(TRIG, GPIO.LOW)                     #Set TRIG as LOW
         GPIO.output(TRIG, GPIO.HIGH)                    #Set TRIG as HIGH
         time.sleep(0.000001)                            #Delay of 0.00001 seconds
         GPIO.output(TRIG, GPIO.LOW)                     #Set TRIG as LOW
 
+        # Waiting for the echo response so we can time it
         while GPIO.input(ECHO)==0:                      #Check if Echo is LOW
             pulseStart = time.time()                    #Time of the last  LOW pulse
-        
+
         while GPIO.input(ECHO)==1:                      #Check whether Echo is HIGH
-            pulseEnd = time.time()                      #Time of the last HIGH pulse 
+            pulseEnd = time.time()                      #Time of the last HIGH pulse
 
         pulseDuration = pulseEnd - pulseStart           #pulse duration to a variable
         distance = pulseDuration * 17150                #Calculate distance
@@ -246,8 +248,9 @@ def read_base_water():
 
         time.sleep(BASE_WATER_UPDATE_INTERVAL)
 
-
+# Read the pH of the reservoir using the ADC
 def read_pH():
+    # Not complete - output dummy values
     ph_values = [6, 6.5, 6.5, 6.5, 6.4, 6.2, 6.3, 6.2, 6.2, 6.3, 6.3, 6.2, 6.4, 6.4]
     while True:
         for x in ph_values:
@@ -255,65 +258,80 @@ def read_pH():
             time.sleep(10)
 
 
+# Read the electrical conductivity of the reservoir using the ADC
 def read_EC():
+    # Not complete - output dummy values
     ec_values = [2, 2.2, 2.2, 2.1, 2.3, 2.3, 2.2, 2.1, 1.9, 2.1, 2.1]
     while True:
         for x in ec_values:
             ec.value = x
             time.sleep(10)
-        
+
+# Read the flow sensor to determine whether water is flowing through the tubes
 def read_flow():
     state = 0
     timer = 0
-    
+
     while timer < 5:
+        # If water is flowing, input FLOW_0 should toggle multiple times
+        # Using a state machine to determine if it is toggling
         flow_input = GPIO.input(FLOW_0)
         if state % 2 == 0 and flow_input == 0:
             state += 1
         elif state % 2 == 1 and flow_input == 1:
             state += 1
-            
+
         if state == 4:
             print("WATER FLOWING")
             return True
-        
+
         time.sleep(0.01)
         timer += 0.01
-        
+
     print("WATER NOT FLOWING")
     return False
-    
-    
+
+
+# Determines if the trays are done filling up with water (at least one tray in the
+# node has reached the top/bottom  water level sensor)
 def trays_filled(node, read_value, level):
     # Reverse read_value (indexing starts on opposite end)
     read_value = read_value[::-1]
-    
+
+    # Use the value from the web interface to see how many trays the user has
+    # connected to the node
     if node == 0:
         num_trays = node1_num_trays.value
     elif node == 1:
         num_trays = node2_num_trays.value
-    
+
+    # All of the top water level sensors have an odd index
+    # All of the bottom water level sensors have an even index
     if level == 'top':
         start = 1
         end = num_trays * 2
     elif level == 'bottom':
         start = 0
         end = (num_trays * 2) - 1
-    
+
     print("Start:", start)
     print("End:", end)
     print(read_value)
+
+    # If any of the trays are filled, say the entire node is done filling
     for i in range(start, end, 2):
         if int(read_value[i]) == 1:
             print("NODE " + str(node) + " TRAY FILLED")
             return True
-    
+
     print("NODE " + str(node) + " TRAY NOT FILLED")
     return False
 
 
 
 #-----------------------------------WATERING----------------------------------
+
+# Turn on and off all the pumps connected to the mux (water and nutrient pumps)
 def toggle_pump(pump, enable):
     if pump == 0:
         print("TOGGLING RES_TO_TRAY PUMP: " + str(enable))
@@ -362,16 +380,17 @@ def toggle_pump(pump, enable):
         GPIO.output(PUMP_SIGNAL, GPIO.HIGH)
     else:
         GPIO.output(PUMP_SIGNAL, GPIO.LOW)
-        
 
+# Turn on and off the pump that circulates the reservoir water
 def toggle_circulation_pump(enable):
     print("TOGGLING CIRCULATION PUMP: " + enable)
     if enable:
         GPIO.output(PUMP_CIRCULATION, GPIO.HIGH)
     else:
         GPIO.output(PUMP_CIRCULATION, GPIO.LOW)
-    
-    
+
+
+# Open/close/brake the valves connected to the base station
 def toggle_valve(associated_pump, direction):
     print("TOGGLING " + associated_pump + " VALVE: " + direction)
 
@@ -381,7 +400,7 @@ def toggle_valve(associated_pump, direction):
     elif associated_pump == 'tray_to_res':
         valve_hb1 = VALVE_2_HB1
         valve_hb2 = VALVE_2_HB2
-    
+
     if direction == 'open':
         GPIO.output(valve_hb1, GPIO.LOW)
         GPIO.output(valve_hb2, GPIO.HIGH)
@@ -391,65 +410,71 @@ def toggle_valve(associated_pump, direction):
     elif direction == 'brake':
         GPIO.output(valve_hb1, GPIO.LOW)
         GPIO.output(valve_hb2, GPIO.LOW)
-        
 
+
+# Open/close/brake the valves connected to the nodes
 def toggle_node_valve(direction, node):
     print("TOGGLING NODE " + str(node) + " VALVE: " + str(direction))
 
+    # Send a request to the node microcontroller to toggle the valve
     valve_success = str(uart_comm(direction, node, ser, UART_SELECT).decode())
     print(valve_success)
+
+    # If it failed to open/close, alert the user
     if valve_success == 'f':
         if node == 0:
             valve1_status.value = 0
         elif node == 1:
             valve2_status.value = 0
-            
+
         send_email("Subject: Hydrogrow Valve Error\n\nAn issue occurred with the valve on node " + str(node) + " at " + str(datetime.now().strftime('%H:%M') + " on " + str(datetime.now().strftime("%m/%d/%Y") + ".\n\nPlease examine the Hydrogrow system.")))
     return valve_success
 
-
+# Drain all the trays for the given node
 def drain_tray(node):
     print("STARTING NODE " + str(node) + " DRAIN")
     toggle_pump(0, False)
-    
+
     toggle_valve('res_to_tray', 'close')
     time.sleep(5)
     toggle_valve('res_to_tray', 'brake')
-    
+
     toggle_node_valve('c', node)
-    
+
     time.sleep(5) #ADJUST ME WHEN SYSTEM IS BUILT
-    
+
     # Turn on drain pump and open drain valves until bottom level sensors aren't triggered.
     toggle_valve('tray_to_res', 'open')
     time.sleep(5)
     toggle_valve('tray_to_res', 'brake')
-    
+
     toggle_node_valve('o', node)
-    
+
     toggle_pump(1, True)
-    
+
+    # Read the trays' water level sensors
+    # Stop pumping once none of the bottom water level sensors are submerged
     read_value = BitArray(uart_comm('w', node, ser, UART_SELECT)).bin
     while trays_filled(node, read_value, 'bottom'):
         read_value = BitArray(uart_comm('w', node, ser, UART_SELECT)).bin
         time.sleep(0.1) #ADJUST ME WHEN SYSTEM IS BUILT
-        
+
     # Turn off drain pump, close drain valves, and return
     toggle_pump(1, False)
-    
+
     toggle_valve('tray_to_res', 'close')
     time.sleep(5)
     toggle_valve('tray_to_res', 'brake')
-    
+
     toggle_node_valve('c', node)
-    
+
     return
-            
-    
+
+# Pump water to the trays associated with the given node
 def fill_tray(node):
     print("STARTING NODE " + str(node) + " FILL")
 
-    # If trays are already full, return
+    # If trays are already full, don't fill them more, so return
     read_value = BitArray(uart_comm('w', node, ser, UART_SELECT)).bin
     print("Top:", read_value)
     if trays_filled(node, read_value, 'top'):
@@ -460,12 +485,12 @@ def fill_tray(node):
     toggle_valve('res_to_tray', 'open')
     time.sleep(5)
     toggle_valve('res_to_tray', 'brake')
-    
+
     toggle_node_valve('o', node)
-    
+
     toggle_pump(0, True)
     time.sleep(20) #ADJUST ME WHEN SYSTEM IS BUILT
-    
+
     # If no water is flowing, throw pump error and return
     if not read_flow():
         if node == 0:
@@ -473,11 +498,11 @@ def fill_tray(node):
         elif node == 1:
             pump2_status.value = 0
         toggle_pump(0, False)
-        
+
         send_email("Subject: Hydrogrow Pump Error\n\nAn issue occurred with the pump on node " + str(node) + " at " + str(datetime.now().strftime('%H:%M') + " on " + str(datetime.now().strftime("%m/%d/%Y") + ".\n\nPlease examine the Hydrogrow system.")))
         print("NO WATER FLOWING. PUMP ERROR.")
         return
-    
+
     # Return if time limit reached
     start_time = time.time()
     while(time.time() - start_time < FILL_TIME_LIMIT):
@@ -489,25 +514,27 @@ def fill_tray(node):
                 leak1_status.value = 0
             elif node == 1:
                 leak2_status.value = 0
-                
+
             send_email("Subject: Hydrogrow Leak Issue\n\nA leak issue occurred on node " + str(node) + " at " + str(datetime.now().strftime('%H:%M') + " on " + str(datetime.now().strftime("%m/%d/%Y") + ".\n\nPlease examine the Hydrogrow system.")))
             print("BOTTOM LEVEL SENSORS NOT TRIGGERED WHEN WATER SHOULD BE FLOWING. LEAK ERROR.")
 
             toggle_pump(0, False)
             return
-        
+
         # If top level sensors are triggered, turn off fill pump and close fill valves.
         read_value = BitArray(uart_comm('w', node, ser, UART_SELECT)).bin
         print("Top:", read_value)
         if trays_filled(node, read_value, 'top'):
             drain_tray(node)
-            return 
-    
+            return
+
     print("FILL TIMEOUT REACHED.")
-    drain_tray(node)    
+    drain_tray(node)
     return
 
 
+# If it is time to water, display that node 1 is in the middle of a watering cycle on web interface
+# Also begin filling the trays
 def node1_water_cycle():
     while True:
         if node1_water_start.value.decode("utf-8") != '':
@@ -527,13 +554,14 @@ def node1_water_cycle():
                     node1_watering.value = 1
                     fill_tray(0)
                     node1_watering.value = 0
-                
+
             else:
                 #print("DON'T START NODE 1 WATER CYCLE")
                 node1_watering.value = 0
         time.sleep(1)
 
 
+# Display that node 2 is in the middle of a watering cycle on web interface
 def node2_water_cycle():
     while True:
         if node2_water_start.value.decode("utf-8") != '':
@@ -571,7 +599,7 @@ def update_database():
         conn.commit()
         time.sleep(DB_UPDATE_INTERVAL)
 
-
+# Read the watering frequency and nutrient levels provided by the user from the web interface
 def read_database():
     conn = sqlite3.connect('../backend/database/HydroDatabase.db')
     curs = conn.cursor()
@@ -627,22 +655,22 @@ def read_database():
             valve2_status.value = subsystem_status[7]
             pH_status.value = subsystem_status[8]
             EC_status.value = subsystem_status[9]
-        
+
         time.sleep(DB_READ_INTERVAL)
 
-
+# Read the system configuration values from the web interface
 def read_config():
     conn = sqlite3.connect('../backend/database/HydroDatabase.db')
     curs = conn.cursor()
-    
+
     curs.execute("SELECT node1_num_trays from CONFIG")
     node1_num_trays.value = int(curs.fetchall()[0][0])
-    
+
     curs.execute("SELECT node2_num_trays from CONFIG")
     node2_num_trays.value = int(curs.fetchall()[0][0])
 
     conn.close()
-    
+
 
 
 #---------------------------------CALIBRATION---------------------------------
@@ -661,7 +689,7 @@ def setup_wifi():
         lcd.message = "Router WPS > Con\nSELECT > Cancel"
         subprocess.Popen(["wpa_cli", "-i", "wlan0", "wps_pbc"])
         time.sleep(5)
-        
+
         while True:
             try:
                 ps = subprocess.run(['iwgetid', '-r'], universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -673,68 +701,78 @@ def setup_wifi():
                     break
             except subprocess.CalledProcessError:
                 print("WPS connection error")
-            
+
             if lcd.select_button:
                 subprocess.Popen(["wpa_cli", "-i", "wlan0", "wps_cancel"])
                 break
 
-            time.sleep(0.2) 
+            time.sleep(0.2)
 
-
+# Testing if the base station can communicate with the node microcontroller
 def test_node(node):
     # Send x messages. If no response throw node error
     print("TESTING NODE", node)
     node_hs = str(uart_comm('h', node, ser, UART_SELECT).decode())
     print(node_hs)
-    
+
     if node_hs != 'h':
         if node == 0:
             node1_status.value = 0
         elif node == 1:
             node2_status.value = 0
-            
+
         send_email("Subject: Hydrogrow Node Communication Issue\n\nAn issue occurred when attempting to communicate with node " + str(node) + " at " + str(datetime.now().strftime('%H:%M') + " on " + str(datetime.now().strftime("%m/%d/%Y") + ".\n\nPlease examine the Hydrogrow system.")))
 
-'''
+
+# Startup test of the node and base station valves during the system diagnostics
 def test_valve(node):
+    # Not done implementing
     # Send x valve close commands. If error, throw node valve fail error
     print("TESTING VALVE", node)
     toggle_node_valve('c', node)
 
 
+# Startup test of the reservoir to tray and tray to reservoir pumps  during the system diagnostics
 def test_pumps():
+    # Not done implementing
     # Turn main pump on and check output flow sensor. If flowrate = 0, throw pump error.p If flowrate <= 0.5*(avg_flowrate), throw clog/leak error
     print("TESTING PUMPS")
     toggle_pump(0, True)
     time.sleep(5) #ADJUST WHEN SYSTEM IS BUILT
-        
+
     return False
 
 
+# Startup test of the tray water levels during the system diagnostics
 def test_trays():
+    # Not done implementing
     # Meant to be run after test_pumps (or whenever you're expecting water to be in a node).
     # Check node tray bottom sensors. If any == 0, throw clog/leak error
     print("TESTING TRAYS")
     time.sleep(5)
     return False
-'''
 
 
+# Startup test of the pH sensor during the system diagnostics
 def test_pH():
+    # Not done implementing
     # Send x messages requesting pH info. If error, throw pH error
     print("TESTING pH")
     time.sleep(5)
     return False
 
 
+# Startup test of the electrical conductivity sensor during the system diagnostics
 def test_EC():
+    # Not done implementing
     # Send x messages requesting EC info. If error, throw EC error.
     print("TESTING EC")
     time.sleep(5)
     return False
 
-'''
+# Running the diagnostics test to ensure the system is hooked up and working properly
 def startup_diagnostics():
+    # Not done implementing
     lcd.clear()
     lcd.message = "SELECT > Diags\nOTHER > Continue"
     selection = 0
@@ -760,9 +798,8 @@ def startup_diagnostics():
         fill_tray()
         print("MAIN PUMP VALVE CLOSE")
         print("MAIN PUMP OFF")
-'''
 
-    
+# Configuring the pumps to off and the valves to close
 def startup_config():
     toggle_pump(0, False)
     toggle_pump(1, False)
@@ -773,11 +810,13 @@ def startup_config():
     toggle_valve('tray_to_res', 'close')
     time.sleep(5)
     toggle_valve('tray_to_res', 'brake')
-    
+
 
 
 #-------------------------------------MAIN-------------------------------------
+# Safely shut down the Raspberry Pi while in headless mode
 def power_down():
+    # Not done: implementing power down with a button press
     #while True:
         #if GPIO.input(POWER_DOWN):
     print("STOPPING PROGRAM")
@@ -785,39 +824,39 @@ def power_down():
     GPIO.cleanup()
     subprocess.run(['shutdown', '0'], universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     exit()
-        
+
     time.sleep(0.1)
 
-    
+
 def main():
     read_config()
     #fill_tray(0)
     #startup_config()
-    
+
     #setup_wifi()
     #startup_diagnostics()
-    
+
 
     # Display startup message
     lcd.message = '\x00\x01  READY TO  \x00\x01\n\x02\x03    GROW    \x02\x03'
     time.sleep(2)
     lcd.clear()
-    
+
     #test_node(0)
-    
-    
-    
+
+
+
     '''
     toggle_valve('res_to_tray', 'close')
     time.sleep(5)
     toggle_valve('res_to_tray', 'brake')
-    
+
     toggle_node_valve('c', 0, ser)
     fill_tray(0)
     print(BitArray(uart_comm('w', 0, ser, UART_SELECT)).bin)
     '''
 
-    
+
     try:
         display_process = multiprocessing.Process(target=local_display, args=(i2c, lcd, state))
         button_process = multiprocessing.Process(target=local_buttons, args=(i2c, lcd, state))
@@ -828,7 +867,7 @@ def main():
         read_database_process = multiprocessing.Process(target=read_database)
         node1_water_cycle_process = multiprocessing.Process(target=node1_water_cycle)
         node2_water_cycle_process = multiprocessing.Process(target=node2_water_cycle)
-        
+
         button_process.start()
         display_process.start()
         base_water_process.start()
@@ -841,8 +880,8 @@ def main():
 
     except:
         print("Unable to start processes")
-        
-    
+
+
 
 
 main()
