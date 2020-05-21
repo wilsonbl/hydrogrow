@@ -33,3 +33,17 @@ Controls pumps and valves to execute custom watering cycles.
 Updates the local display and backend database with sensor, watering, and fault information.
 
 The main hardware code can be found at hydrogrow/hardware/HardwareCode.py
+
+## Node
+
+**Firmware running on the ATmega328p microcontrollers on the nodes.**
+
+Contains run_node.c, which uses UART (uart_functions) to read in a command from the base station PCB.
+
+If asked, it polls water level sensors and sends back the water level values.
+
+If asked, it opens and closes the node's valve.
+
+Compiles and uploads without a bootloader using the Makefile provided.
+
+Requires avr-dude and avr-gcc to be installed. 
