@@ -47,3 +47,22 @@ If asked, it opens and closes the node's valve.
 Compiles and uploads without a bootloader using the Makefile provided.
 
 Requires avr-dude and avr-gcc to be installed. 
+
+
+## Running the code
+By default, the Raspberry Pi on the system runs the frontend, backend, and hardware code automatically on boot. Any of these three pieces of software can also be run manually.
+
+To run the frontend or backend code, [node.js](https://nodejs.org/) must be installed.
+
+To run the hardware code, [python3](https://www.python.org/downloads/) must be installed.
+
+### Frontend
+1. From the frontend directory, execute ```npm install``` to install all required dependencies.
+2. Use ```npm start``` to run the web interface frontend. To view the interface, navigate a web browser to [localhost:3000](localhost:3000) (this webpage should open automatically when you run the command).
+
+### Backend
+1. From the backend directory, execute ```npm install``` to install all require dependencies.
+2. If you are on Windows, use ```SET PORT=3001 && npm start``` to run the web interface backend. If you are using Linux, this command can be shortened to ```PORT=3001 npm start```. The port is set to 3001 so it doesn't conflict with the frontend code which is running on port 3000.
+
+### Hardware
+1. From the hardware directory, execute ```python3 HardwareCode.py```. If any dependencies are not present, please install them with pip and try again.
