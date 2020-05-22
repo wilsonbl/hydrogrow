@@ -10,7 +10,7 @@ If asked, it opens and closes the node's valve.
 
 Compiles and uploads without a bootloader using the Makefile provided.
 
-Requires avr-dude and avr-gcc to be installed. 
+Requires avrdude and avr-gcc to be installed. 
 
 ## Uploading code to microcontroller
 
